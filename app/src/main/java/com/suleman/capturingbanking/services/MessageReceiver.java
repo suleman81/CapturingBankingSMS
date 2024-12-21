@@ -121,27 +121,4 @@ public class MessageReceiver extends BroadcastReceiver {
             e.printStackTrace();
         }
     }
-
-    public String getDeviceIMEI(Context context) {
-        String deviceUniqueIdentifier = null;
-        try {
-            TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-            if (null != tm) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    deviceUniqueIdentifier = tm.getImei();
-                } else {
-                    deviceUniqueIdentifier = tm.getDeviceId();
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        if (null == deviceUniqueIdentifier || deviceUniqueIdentifier.isEmpty()) {
-            deviceUniqueIdentifier = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
-        }
-        if (deviceUniqueIdentifier == null) deviceUniqueIdentifier = "";
-
-        return deviceUniqueIdentifier;
-    }
-
 }
