@@ -1,0 +1,407 @@
+package com.suleman.capturingbanking;
+
+import android.app.ProgressDialog;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.res.Configuration;
+import android.os.Build;
+import android.os.Bundle;
+import android.util.DisplayMetrics;
+import android.util.Log;
+import android.view.WindowManager;
+import android.widget.ArrayAdapter;
+import android.widget.Toast;
+
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.fxn.stash.Stash;
+import com.suleman.capturingbanking.databinding.ActivityMainBinding;
+import com.suleman.capturingbanking.services.MessageReceiver;
+import com.suleman.capturingbanking.services.VolleySingleton;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+
+public class MainActivity extends AppCompatActivity {
+
+    ActivityMainBinding binding;
+    ProgressDialog progressDialog;
+    String device;
+    ArrayList<String> departments = new ArrayList<>();
+    ArrayList<Department> departmentsID = new ArrayList<>();
+    ArrayList<Department> devices = new ArrayList<>();
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        adjustFontScale(MainActivity.this);
+        binding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Getting Department List...");
+        progressDialog.setCancelable(false);
+        progressDialog.show();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (above13Check()) {
+                startActivity(new Intent(this, PermissionActivity.class));
+            }
+        } else {
+            if (below13Check()) {
+                startActivity(new Intent(this, PermissionActivity.class));
+            }
+        }
+
+        getDepartmentList();
+        getDevices();
+
+        if (Stash.getObject(MessageReceiver.INFO, DeviceModel.class) != null) {
+            DeviceModel deviceModel = (DeviceModel) Stash.getObject(MessageReceiver.INFO, DeviceModel.class);
+            binding.deviceName.getEditText().setText(deviceModel.device);
+            binding.bankName.getEditText().setText(deviceModel.bankName);
+            binding.accountNumber.getEditText().setText(deviceModel.accountNumber);
+            binding.accountTitle.getEditText().setText(deviceModel.accountTitle);
+            binding.department.getEditText().setText(deviceModel.department);
+
+            binding.deviceName.setEnabled(false);
+            binding.bankName.setEnabled(false);
+            binding.accountNumber.setEnabled(false);
+            binding.accountTitle.setEnabled(false);
+            binding.department.setEnabled(false);
+            binding.save.setText("Edit");
+        }
+
+        binding.save.setOnClickListener(v -> {
+            if (!binding.save.getText().toString().equals("Edit")) {
+                if (valid()) {
+                    boolean isDeviceExist = false;
+                    for (Department device : devices) {
+                        if (device.name.equals(binding.deviceName.getEditText().getText().toString().trim())) {
+                            isDeviceExist = true;
+                            this.device = device.id;
+                            break;
+                        }
+                    }
+                    if (!isDeviceExist) {
+                        progressDialog.setMessage("Please Wait...");
+                        progressDialog.show();
+                        create_device();
+                    } else {
+                        updateInfo();
+                    }
+                }
+            } else {
+                binding.save.setText("Save Info");
+                binding.deviceName.setEnabled(true);
+                binding.bankName.setEnabled(true);
+                binding.accountNumber.setEnabled(true);
+                binding.accountTitle.setEnabled(true);
+                binding.department.setEnabled(true);
+            }
+        });
+    }
+
+    public static void adjustFontScale(Context context) {
+        Configuration configuration = context.getResources().getConfiguration();
+        if (configuration.fontScale > 1.00) {
+            configuration.fontScale = 1.00f;
+            DisplayMetrics metrics = context.getResources().getDisplayMetrics();
+            WindowManager wm = (WindowManager) context.getSystemService(WINDOW_SERVICE);
+            wm.getDefaultDisplay().getMetrics(metrics);
+            metrics.scaledDensity = configuration.fontScale * metrics.density;
+            context.getResources().updateConfiguration(configuration, metrics);
+        }
+    }
+
+    private void updateInfo() {
+        RequestQueue requestQueue = VolleySingleton.getInstance(this).getRequestQueue();
+        JSONObject json = new JSONObject();
+        try {
+            json.put("device_id", this.device);
+            json.put("device", binding.deviceName.getEditText().getText().toString().trim());
+            json.put("bank_name", binding.bankName.getEditText().getText().toString().trim());
+            json.put("account_title", binding.accountTitle.getEditText().getText().toString().trim());
+            json.put("account_number", binding.accountNumber.getEditText().getText().toString().trim());
+            String department_ID = "";
+            for (Department department : departmentsID) {
+                if (department.name.equals(binding.department.getEditText().getText().toString().trim())) {
+                    department_ID = department.id;
+                    Log.d(TAG, "savedInfo: " + department.id);
+                    break;
+                }
+            }
+            json.put("department", department_ID);
+            JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, API.getLink("device-update"), json,
+                    response -> {
+                        progressDialog.dismiss();
+                        Log.d("TOKEN_CHECK", "Response DEVICE : " + response.toString());
+                        try {
+                            JSONObject result = response.getJSONObject("result");
+                            device = result.getString("_id");
+//                            create_department();
+                            savedInfo();
+                        } catch (JSONException e) {
+                            runOnUiThread(() -> {
+                                Toast.makeText(this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                            });
+                            e.printStackTrace();
+                        }
+                    },
+                    error -> {
+                        runOnUiThread(() -> {
+                            progressDialog.dismiss();
+                            Toast.makeText(this, "This device is already exists", Toast.LENGTH_SHORT).show();
+                        });
+                        Log.e("TOKEN_CHECK", "Error  : " + error.getLocalizedMessage());
+                    }
+            );
+            requestQueue.add(stringRequest);
+        } catch (Exception e) {
+            progressDialog.dismiss();
+            Toast.makeText(this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
+    }
+
+    private void getDevices() {
+        devices.clear();
+        RequestQueue requestQueue = VolleySingleton.getInstance(this).getRequestQueue();
+        JsonObjectRequest objectRequest = new JsonObjectRequest(Request.Method.GET, API.getLink("devices-list"), null, response -> {
+            progressDialog.dismiss();
+            try {
+                JSONArray result = response.getJSONArray("result");
+                for (int i = 0; i < result.length(); i++) {
+                    JSONObject object = result.getJSONObject(i);
+                    devices.add(new Department(object.getString("_id"), object.getString("name")));
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }, error -> {
+            runOnUiThread(() -> {
+                progressDialog.dismiss();
+                Toast.makeText(this, "Error : " + error.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+            });
+        });
+        requestQueue.add(objectRequest);
+    }
+
+    private void create_device() {
+        RequestQueue requestQueue = VolleySingleton.getInstance(this).getRequestQueue();
+        JSONObject json = new JSONObject();
+        try {
+            json.put("device", binding.deviceName.getEditText().getText().toString().trim());
+            json.put("bank_name", binding.bankName.getEditText().getText().toString().trim());
+            json.put("account_title", binding.accountTitle.getEditText().getText().toString().trim());
+            json.put("account_number", binding.accountNumber.getEditText().getText().toString().trim());
+            String department_ID = "";
+            for (Department department : departmentsID) {
+                if (department.name.equals(binding.department.getEditText().getText().toString().trim())) {
+                    department_ID = department.id;
+                    Log.d(TAG, "savedInfo: " + department.id);
+                    break;
+                }
+            }
+            json.put("department", department_ID);
+            JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, API.getLink("device-create"), json,
+                    response -> {
+                        progressDialog.dismiss();
+                        Log.d("TOKEN_CHECK", "Response DEVICE : " + response.toString());
+                        try {
+                            JSONObject result = response.getJSONObject("result");
+                            device = result.getString("_id");
+//                            create_department();
+                            savedInfo();
+                        } catch (JSONException e) {
+                            runOnUiThread(() -> {
+                                Toast.makeText(this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                            });
+                            e.printStackTrace();
+                        }
+                    },
+                    error -> {
+                        runOnUiThread(() -> {
+                            progressDialog.dismiss();
+                            Toast.makeText(this, "This device is already exists", Toast.LENGTH_SHORT).show();
+                        });
+                        Log.e("TOKEN_CHECK", "Error  : " + error.getLocalizedMessage());
+                    }
+            );
+            requestQueue.add(stringRequest);
+        } catch (Exception e) {
+            progressDialog.dismiss();
+            Toast.makeText(this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
+    }
+
+/*    private void create_department() {
+        RequestQueue requestQueue = VolleySingleton.getInstance(this).getRequestQueue();
+        JSONObject json = new JSONObject();
+        try {
+            json.put("department", binding.department.getEditText().getText().toString().trim());
+            JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, "http://3.29.241.160:8000/create-department", json,
+                    response -> {
+                        progressDialog.dismiss();
+                        Log.d("TOKEN_CHECK", "Response department : " + response.toString());
+                        try {
+                            JSONObject result = response.getJSONObject("result");
+                            department = result.getString("_id");
+                            savedInfo();
+                        } catch (JSONException e) {
+                            runOnUiThread(() -> {
+                                progressDialog.dismiss();
+                                Toast.makeText(this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                            });
+                            e.printStackTrace();
+                        }
+                    },
+                    error -> {
+                        runOnUiThread(() -> {
+                            progressDialog.dismiss();
+                            Toast.makeText(MainActivity.this, "Something went wrong", Toast.LENGTH_SHORT).show();
+                        });
+                        Log.e("TOKEN_CHECK", "Error  : " + error.getLocalizedMessage());
+                    }
+            );
+            requestQueue.add(stringRequest);
+        } catch (Exception e) {
+            progressDialog.dismiss();
+            Toast.makeText(this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
+    }*/
+
+    private void savedInfo() {
+        DeviceModel deviceModel = new DeviceModel();
+        deviceModel.device_ID = device;
+        Log.d(TAG, "savedInfo: " + device);
+        Log.d(TAG, "savedInfo: " + deviceModel.device_ID);
+        deviceModel.department_ID = "";
+        for (Department department : departmentsID) {
+            if (department.name.equals(binding.department.getEditText().getText().toString().trim())) {
+                deviceModel.department_ID = department.id;
+                Log.d(TAG, "savedInfo: " + department.id);
+                break;
+            }
+        }
+        deviceModel.device = binding.deviceName.getEditText().getText().toString();
+        deviceModel.bankName = binding.bankName.getEditText().getText().toString();
+        deviceModel.accountTitle = binding.accountTitle.getEditText().getText().toString();
+        deviceModel.accountNumber = binding.accountNumber.getEditText().getText().toString();
+        deviceModel.department = binding.department.getEditText().getText().toString();
+        Stash.put(MessageReceiver.INFO, deviceModel);
+        Toast.makeText(this, "Info saved", Toast.LENGTH_SHORT).show();
+        binding.deviceName.setEnabled(false);
+        binding.bankName.setEnabled(false);
+        binding.accountNumber.setEnabled(false);
+        binding.accountTitle.setEnabled(false);
+        binding.department.setEnabled(false);
+        binding.save.setText("Edit");
+
+        getDevices();
+    }
+
+    private void getDepartmentList() {
+        RequestQueue requestQueue = VolleySingleton.getInstance(this).getRequestQueue();
+        JsonObjectRequest objectRequest = new JsonObjectRequest(Request.Method.GET, API.getLink("department"), null, response -> {
+            progressDialog.dismiss();
+            try {
+                JSONArray result = response.getJSONArray("result");
+                for (int i = 0; i < result.length(); i++) {
+                    JSONObject object = result.getJSONObject(i);
+                    departmentsID.add(new Department(object.getString("_id"), object.getString("name")));
+                    departments.add(object.getString("name"));
+                }
+                ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, departments);
+                binding.departmentList.setAdapter(adapter);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }, error -> {
+            runOnUiThread(() -> {
+                progressDialog.dismiss();
+                Toast.makeText(this, "Error : " + error.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+            });
+        });
+        requestQueue.add(objectRequest);
+    }
+
+    private boolean valid() {
+        if (binding.deviceName.getEditText().getText().toString().isEmpty()) {
+            Toast.makeText(this, "Device name is empty", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        if (binding.bankName.getEditText().getText().toString().isEmpty()) {
+            Toast.makeText(this, "Bank name is empty", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        if (binding.accountTitle.getEditText().getText().toString().isEmpty()) {
+            Toast.makeText(this, "Account Title is empty", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        if (binding.accountNumber.getEditText().getText().toString().isEmpty()) {
+            Toast.makeText(this, "Account Name is empty", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        if (binding.department.getEditText().getText().toString().isEmpty()) {
+            Toast.makeText(this, "Department is empty", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        return true;
+    }
+
+    public static String getSerialNumber() {
+        String serialNumber;
+        try {
+            Class<?> c = Class.forName("android.os.SystemProperties");
+            Method get = c.getMethod("get", String.class);
+            serialNumber = (String) get.invoke(c, "gsm.sn1");
+            if (serialNumber.equals(""))
+                serialNumber = (String) get.invoke(c, "ril.serialnumber");
+            if (serialNumber.equals(""))
+                serialNumber = (String) get.invoke(c, "ro.serialno");
+            if (serialNumber.equals(""))
+                serialNumber = (String) get.invoke(c, "sys.serialnumber");
+            if (serialNumber.equals(""))
+                serialNumber = Build.SERIAL;
+            if (serialNumber.equals(Build.UNKNOWN))
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    serialNumber = Build.getSerial();
+                } else serialNumber = "";
+        } catch (Exception e) {
+            Log.d(TAG, "getSerialNumber: " + e.getLocalizedMessage());
+            serialNumber = Build.SERIAL;
+        }
+        Log.d(TAG, "getSerialNumber: " + serialNumber);
+        return serialNumber;
+    }
+
+    private static final String TAG = "MainActivity";
+
+    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
+    private boolean above13Check() {
+        return ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean below13Check() {
+        return ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED;
+    }
+
+}

