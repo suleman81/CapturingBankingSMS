@@ -1,16 +1,21 @@
 package com.suleman.capturingbanking;
 
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.ViewGroup;
+import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
@@ -21,6 +26,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.fxn.stash.Stash;
+import com.google.android.material.textfield.TextInputLayout;
 import com.suleman.capturingbanking.databinding.ActivityMainBinding;
 import com.suleman.capturingbanking.services.MessageReceiver;
 import com.suleman.capturingbanking.services.VolleySingleton;
@@ -62,6 +68,10 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(new Intent(this, PermissionActivity.class));
             }
         }
+
+        binding.restore.setOnClickListener(v -> {
+            restoreData();
+        });
 
         getDepartmentList();
         getDevices();
@@ -110,6 +120,82 @@ public class MainActivity extends AppCompatActivity {
                 binding.department.setEnabled(true);
             }
         });
+    }
+
+    private void restoreData() {
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.account_number);
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+        dialog.setCancelable(false);
+        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        dialog.show();
+
+        Button restore = dialog.findViewById(R.id.restore);
+        TextInputLayout account = dialog.findViewById(R.id.account);
+
+        restore.setOnClickListener(v -> {
+           if (account.getEditText().getText().toString().isEmpty()) {
+               Toast.makeText(this, "Account number is empty", Toast.LENGTH_SHORT).show();
+           } else {
+               dialog.dismiss();
+               fetchData(account.getEditText().getText().toString());
+           }
+        });
+    }
+
+    private void fetchData(String accountNumber) {
+        progressDialog.setMessage("Please Wait...");
+        progressDialog.show();
+
+        RequestQueue requestQueue = VolleySingleton.getInstance(this).getRequestQueue();
+        JsonObjectRequest objectRequest = new JsonObjectRequest(Request.Method.GET, API.getRestoreLink(accountNumber), null, response -> {
+            progressDialog.dismiss();
+            try {
+                JSONObject result = response.getJSONObject("result");
+                DeviceModel deviceModel = new DeviceModel();
+                deviceModel.device = result.getString("name");
+                deviceModel.bankName = result.getString("bank_name");
+                deviceModel.accountTitle = result.getString("account_title");
+                deviceModel.accountNumber = result.getString("account_number");
+                deviceModel.device_ID = result.getString("_id");
+                deviceModel.department = result.getJSONObject("department").getString("name");
+                deviceModel.department_ID = result.getJSONObject("department").getString("_id");
+
+                this.device = deviceModel.device_ID;
+
+                updateUI(deviceModel);
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }, error -> {
+            runOnUiThread(() -> {
+                progressDialog.dismiss();
+                Toast.makeText(this, "Error : " + error.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+            });
+        });
+        requestQueue.add(objectRequest);
+
+    }
+
+    private void updateUI(DeviceModel deviceModel) {
+        Stash.put(MessageReceiver.INFO, deviceModel);
+        Toast.makeText(this, "Data Restored", Toast.LENGTH_SHORT).show();
+        binding.deviceName.setEnabled(false);
+        binding.bankName.setEnabled(false);
+        binding.accountNumber.setEnabled(false);
+        binding.accountTitle.setEnabled(false);
+        binding.department.setEnabled(false);
+        binding.save.setText("Edit");
+
+        binding.deviceName.getEditText().setText(deviceModel.device);
+        binding.bankName.getEditText().setText(deviceModel.bankName);
+        binding.accountNumber.getEditText().setText(deviceModel.accountNumber);
+        binding.accountTitle.getEditText().setText(deviceModel.accountTitle);
+        binding.department.getEditText().setText(deviceModel.department);
+
+        getDevices();
     }
 
     public static void adjustFontScale(Context context) {
