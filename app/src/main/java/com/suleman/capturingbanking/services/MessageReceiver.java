@@ -4,11 +4,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.telephony.SmsMessage;
-import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -17,7 +14,7 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.fxn.stash.Stash;
 import com.suleman.capturingbanking.API;
-import com.suleman.capturingbanking.DeviceModel;
+import com.suleman.capturingbanking.model.DeviceModel;
 
 import org.json.JSONException;
 import org.json.JSONObject;

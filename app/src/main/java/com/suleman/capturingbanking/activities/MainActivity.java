@@ -1,4 +1,4 @@
-package com.suleman.capturingbanking;
+package com.suleman.capturingbanking.activities;
 
 import android.app.Dialog;
 import android.app.ProgressDialog;
@@ -27,7 +27,11 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.fxn.stash.Stash;
 import com.google.android.material.textfield.TextInputLayout;
+import com.suleman.capturingbanking.API;
+import com.suleman.capturingbanking.R;
 import com.suleman.capturingbanking.databinding.ActivityMainBinding;
+import com.suleman.capturingbanking.model.Department;
+import com.suleman.capturingbanking.model.DeviceModel;
 import com.suleman.capturingbanking.services.MessageReceiver;
 import com.suleman.capturingbanking.services.VolleySingleton;
 
