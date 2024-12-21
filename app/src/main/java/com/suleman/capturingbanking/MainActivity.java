@@ -95,27 +95,13 @@ public class MainActivity extends AppCompatActivity {
         binding.save.setOnClickListener(v -> {
             if (!binding.save.getText().toString().equals("Edit")) {
                 if (valid()) {
-                    boolean isDeviceExist = false;
-                    for (Department device : devices) {
-                        if (device.name.equals(binding.deviceName.getEditText().getText().toString().trim())) {
-                            isDeviceExist = true;
-                            this.device = device.id;
-                            break;
-                        }
-                    }
-                    if (!isDeviceExist) {
-                        progressDialog.setMessage("Please Wait...");
-                        progressDialog.show();
-                        create_device();
-                    } else {
-                        updateInfo();
-                    }
+                    fetchData(binding.accountNumber.getEditText().getText().toString(), true);
                 }
             } else {
                 binding.save.setText("Save Info");
                 binding.deviceName.setEnabled(true);
                 binding.bankName.setEnabled(true);
-                binding.accountNumber.setEnabled(true);
+                binding.accountNumber.setEnabled(false);
                 binding.accountTitle.setEnabled(true);
                 binding.department.setEnabled(true);
             }
@@ -139,12 +125,12 @@ public class MainActivity extends AppCompatActivity {
                Toast.makeText(this, "Account number is empty", Toast.LENGTH_SHORT).show();
            } else {
                dialog.dismiss();
-               fetchData(account.getEditText().getText().toString());
+               fetchData(account.getEditText().getText().toString(), false);
            }
         });
     }
 
-    private void fetchData(String accountNumber) {
+    private void fetchData(String accountNumber, boolean check) {
         progressDialog.setMessage("Please Wait...");
         progressDialog.show();
 
@@ -153,26 +139,39 @@ public class MainActivity extends AppCompatActivity {
             progressDialog.dismiss();
             try {
                 JSONObject result = response.getJSONObject("result");
-                DeviceModel deviceModel = new DeviceModel();
-                deviceModel.device = result.getString("name");
-                deviceModel.bankName = result.getString("bank_name");
-                deviceModel.accountTitle = result.getString("account_title");
-                deviceModel.accountNumber = result.getString("account_number");
-                deviceModel.device_ID = result.getString("_id");
-                deviceModel.department = result.getJSONObject("department").getString("name");
-                deviceModel.department_ID = result.getJSONObject("department").getString("_id");
+                String message = response.getString("message");
+                if (check) {
+                    if (message.equals("Record not found")) {
+                        progressDialog.setMessage("Creating New Device...");
+                        progressDialog.show();
+                        create_device();
+                    } else {
+                        this.device = result.getString("_id");
+                        updateInfo();
+                    }
+                } else {
+                    DeviceModel deviceModel = new DeviceModel();
+                    deviceModel.device = result.getString("name");
+                    deviceModel.bankName = result.getString("bank_name");
+                    deviceModel.accountTitle = result.getString("account_title");
+                    deviceModel.accountNumber = result.getString("account_number");
+                    deviceModel.device_ID = result.getString("_id");
+                    deviceModel.department = result.getJSONObject("department").getString("name");
+                    deviceModel.department_ID = result.getJSONObject("department").getString("_id");
 
-                this.device = deviceModel.device_ID;
+                    this.device = deviceModel.device_ID;
 
-                updateUI(deviceModel);
-
+                    updateUI(deviceModel);
+                }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
         }, error -> {
             runOnUiThread(() -> {
                 progressDialog.dismiss();
-                Toast.makeText(this, "Error : " + error.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                progressDialog.setMessage("Creating New Device...");
+                progressDialog.show();
+                create_device();
             });
         });
         requestQueue.add(objectRequest);
