@@ -40,6 +40,14 @@
             android:backgroundTint="@color/blue"
             android:text="Restore" />
 
+        <Button
+            android:id="@+id/close"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@color/white"
+            android:textColor="@color/black"
+            android:text="Close" />
+
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

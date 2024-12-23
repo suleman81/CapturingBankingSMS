@@ -122,7 +122,10 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
 
         Button restore = dialog.findViewById(R.id.restore);
+        Button close = dialog.findViewById(R.id.close);
         TextInputLayout account = dialog.findViewById(R.id.account);
+
+        close.setOnClickListener(v -> dialog.dismiss());
 
         restore.setOnClickListener(v -> {
            if (account.getEditText().getText().toString().isEmpty()) {
