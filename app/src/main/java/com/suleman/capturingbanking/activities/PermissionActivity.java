@@ -1,4 +1,4 @@
-package com.suleman.capturingbanking;
+package com.suleman.capturingbanking.activities;
 
 import android.Manifest;
 import android.content.Context;

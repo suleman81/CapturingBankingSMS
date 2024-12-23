@@ -1,4 +1,4 @@
-package com.suleman.capturingbanking;
+package com.suleman.capturingbanking.model;
 
 public class DeviceModel {
     public String device, bankName, accountTitle, accountNumber, department;

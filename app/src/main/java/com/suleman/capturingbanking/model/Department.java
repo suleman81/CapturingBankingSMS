@@ -1,7 +1,7 @@
-package com.suleman.capturingbanking;
+package com.suleman.capturingbanking.model;
 
 public class Department {
-    String id, name;
+    public String id, name;
 
     public Department(String id, String name) {
         this.id = id;

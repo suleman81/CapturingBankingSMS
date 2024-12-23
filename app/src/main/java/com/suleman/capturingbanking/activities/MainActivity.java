@@ -1,16 +1,21 @@
-package com.suleman.capturingbanking;
+package com.suleman.capturingbanking.activities;
 
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.ViewGroup;
+import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
@@ -21,7 +26,12 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.fxn.stash.Stash;
+import com.google.android.material.textfield.TextInputLayout;
+import com.suleman.capturingbanking.API;
+import com.suleman.capturingbanking.R;
 import com.suleman.capturingbanking.databinding.ActivityMainBinding;
+import com.suleman.capturingbanking.model.Department;
+import com.suleman.capturingbanking.model.DeviceModel;
 import com.suleman.capturingbanking.services.MessageReceiver;
 import com.suleman.capturingbanking.services.VolleySingleton;
 
@@ -63,6 +73,10 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        binding.restore.setOnClickListener(v -> {
+            restoreData();
+        });
+
         getDepartmentList();
         getDevices();
 
@@ -85,31 +99,109 @@ public class MainActivity extends AppCompatActivity {
         binding.save.setOnClickListener(v -> {
             if (!binding.save.getText().toString().equals("Edit")) {
                 if (valid()) {
-                    boolean isDeviceExist = false;
-                    for (Department device : devices) {
-                        if (device.name.equals(binding.deviceName.getEditText().getText().toString().trim())) {
-                            isDeviceExist = true;
-                            this.device = device.id;
-                            break;
-                        }
-                    }
-                    if (!isDeviceExist) {
-                        progressDialog.setMessage("Please Wait...");
-                        progressDialog.show();
-                        create_device();
-                    } else {
-                        updateInfo();
-                    }
+                    fetchData(binding.accountNumber.getEditText().getText().toString(), true);
                 }
             } else {
                 binding.save.setText("Save Info");
                 binding.deviceName.setEnabled(true);
                 binding.bankName.setEnabled(true);
-                binding.accountNumber.setEnabled(true);
+                binding.accountNumber.setEnabled(false);
                 binding.accountTitle.setEnabled(true);
                 binding.department.setEnabled(true);
             }
         });
+    }
+
+    private void restoreData() {
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.account_number);
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+        dialog.setCancelable(false);
+        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        dialog.show();
+
+        Button restore = dialog.findViewById(R.id.restore);
+        Button close = dialog.findViewById(R.id.close);
+        TextInputLayout account = dialog.findViewById(R.id.account);
+
+        close.setOnClickListener(v -> dialog.dismiss());
+
+        restore.setOnClickListener(v -> {
+           if (account.getEditText().getText().toString().isEmpty()) {
+               Toast.makeText(this, "Account number is empty", Toast.LENGTH_SHORT).show();
+           } else {
+               dialog.dismiss();
+               fetchData(account.getEditText().getText().toString(), false);
+           }
+        });
+    }
+
+    private void fetchData(String accountNumber, boolean check) {
+        progressDialog.setMessage("Please Wait...");
+        progressDialog.show();
+
+        RequestQueue requestQueue = VolleySingleton.getInstance(this).getRequestQueue();
+        JsonObjectRequest objectRequest = new JsonObjectRequest(Request.Method.GET, API.getRestoreLink(accountNumber), null, response -> {
+            progressDialog.dismiss();
+            try {
+                JSONObject result = response.getJSONObject("result");
+                String message = response.getString("message");
+                if (check) {
+                    if (message.equals("Record not found")) {
+                        progressDialog.setMessage("Creating New Device...");
+                        progressDialog.show();
+                        create_device();
+                    } else {
+                        this.device = result.getString("_id");
+                        updateInfo();
+                    }
+                } else {
+                    DeviceModel deviceModel = new DeviceModel();
+                    deviceModel.device = result.getString("name");
+                    deviceModel.bankName = result.getString("bank_name");
+                    deviceModel.accountTitle = result.getString("account_title");
+                    deviceModel.accountNumber = result.getString("account_number");
+                    deviceModel.device_ID = result.getString("_id");
+                    deviceModel.department = result.getJSONObject("department").getString("name");
+                    deviceModel.department_ID = result.getJSONObject("department").getString("_id");
+
+                    this.device = deviceModel.device_ID;
+
+                    updateUI(deviceModel);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }, error -> {
+            runOnUiThread(() -> {
+                progressDialog.dismiss();
+                progressDialog.setMessage("Creating New Device...");
+                progressDialog.show();
+                create_device();
+            });
+        });
+        requestQueue.add(objectRequest);
+
+    }
+
+    private void updateUI(DeviceModel deviceModel) {
+        Stash.put(MessageReceiver.INFO, deviceModel);
+        Toast.makeText(this, "Data Restored", Toast.LENGTH_SHORT).show();
+        binding.deviceName.setEnabled(false);
+        binding.bankName.setEnabled(false);
+        binding.accountNumber.setEnabled(false);
+        binding.accountTitle.setEnabled(false);
+        binding.department.setEnabled(false);
+        binding.save.setText("Edit");
+
+        binding.deviceName.getEditText().setText(deviceModel.device);
+        binding.bankName.getEditText().setText(deviceModel.bankName);
+        binding.accountNumber.getEditText().setText(deviceModel.accountNumber);
+        binding.accountTitle.getEditText().setText(deviceModel.accountTitle);
+        binding.department.getEditText().setText(deviceModel.department);
+
+        getDevices();
     }
 
     public static void adjustFontScale(Context context) {
