@@ -163,28 +163,34 @@ public class MainActivity extends AppCompatActivity {
                         updateInfo();
                     }
                 } else {
-                    DeviceModel deviceModel = new DeviceModel();
-                    deviceModel.device = result.getString("name");
-                    deviceModel.bankName = result.getString("bank_name");
-                    deviceModel.accountTitle = result.getString("account_title");
-                    deviceModel.accountNumber = result.getString("account_number");
-                    deviceModel.device_ID = result.getString("_id");
-                    deviceModel.department = result.getJSONObject("department").getString("name");
-                    deviceModel.department_ID = result.getJSONObject("department").getString("_id");
+                    if (!message.equals("Record not found")) {
+                        DeviceModel deviceModel = new DeviceModel();
+                        deviceModel.device = result.getString("name");
+                        deviceModel.bankName = result.getString("bank_name");
+                        deviceModel.accountTitle = result.getString("account_title");
+                        deviceModel.accountNumber = result.getString("account_number");
+                        deviceModel.device_ID = result.getString("_id");
+                        deviceModel.department = result.getJSONObject("department").getString("name");
+                        deviceModel.department_ID = result.getJSONObject("department").getString("_id");
 
-                    this.device = deviceModel.device_ID;
+                        this.device = deviceModel.device_ID;
 
-                    updateUI(deviceModel);
+                        updateUI(deviceModel);
+                    } else {
+                        Toast.makeText(this, "Account number is invalid", Toast.LENGTH_SHORT).show();
+                    }
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
         }, error -> {
+            Log.d(TAG, "fetchData: " + error.getLocalizedMessage());
             runOnUiThread(() -> {
                 progressDialog.dismiss();
-                progressDialog.setMessage("Creating New Device...");
-                progressDialog.show();
-                create_device();
+                Toast.makeText(this, "Account number is invalid", Toast.LENGTH_SHORT).show();
+//                progressDialog.setMessage("Creating New Device...");
+//                progressDialog.show();
+//                create_device();
             });
         });
         requestQueue.add(objectRequest);
