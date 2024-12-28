@@ -5,11 +5,11 @@ public class API {
     private static final String STAGE_BASE = "https://stage.btocsms.com/api/";
 
     public static String getLink(String path) {
-        return STAGE_BASE + path;
+        return BASE + path;
     }
 
     public static String getRestoreLink(String accountNumber) {
-        return STAGE_BASE + "devicerecord/" +  accountNumber;
+        return BASE + "devicerecord/" +  accountNumber;
     }
 
 }
