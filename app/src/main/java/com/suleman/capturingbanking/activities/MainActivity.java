@@ -9,6 +9,8 @@ import android.content.res.Configuration;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.InputFilter;
+import android.text.Spanned;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.ViewGroup;
@@ -77,6 +79,8 @@ public class MainActivity extends AppCompatActivity {
             restoreData();
         });
 
+        binding.accountNumber.getEditText().setFilters(new InputFilter[]{alphanumericFilter});
+
         getDepartmentList();
         getDevices();
 
@@ -125,15 +129,17 @@ public class MainActivity extends AppCompatActivity {
         Button close = dialog.findViewById(R.id.close);
         TextInputLayout account = dialog.findViewById(R.id.account);
 
+        account.getEditText().setFilters(new InputFilter[]{alphanumericFilter});
+
         close.setOnClickListener(v -> dialog.dismiss());
 
         restore.setOnClickListener(v -> {
-           if (account.getEditText().getText().toString().isEmpty()) {
-               Toast.makeText(this, "Account number is empty", Toast.LENGTH_SHORT).show();
-           } else {
-               dialog.dismiss();
-               fetchData(account.getEditText().getText().toString(), false);
-           }
+            if (account.getEditText().getText().toString().isEmpty()) {
+                Toast.makeText(this, "Account number is empty", Toast.LENGTH_SHORT).show();
+            } else {
+                dialog.dismiss();
+                fetchData(account.getEditText().getText().toString(), false);
+            }
         });
     }
 
@@ -225,13 +231,12 @@ public class MainActivity extends AppCompatActivity {
             json.put("bank_name", binding.bankName.getEditText().getText().toString().trim());
             json.put("account_title", binding.accountTitle.getEditText().getText().toString().trim());
             json.put("account_number", binding.accountNumber.getEditText().getText().toString().trim());
-            String department_ID = "";
-            for (Department department : departmentsID) {
-                if (department.name.equals(binding.department.getEditText().getText().toString().trim())) {
-                    department_ID = department.id;
-                    Log.d(TAG, "savedInfo: " + department.id);
-                    break;
-                }
+            String department_ID = getDepartmentID();
+            if (department_ID.isEmpty()) {
+                progressDialog.dismiss();
+                binding.department.getEditText().setText("");
+                Toast.makeText(this, "Department is invalid", Toast.LENGTH_SHORT).show();
+                return;
             }
             json.put("department", department_ID);
             JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, API.getLink("device-update"), json,
@@ -297,15 +302,16 @@ public class MainActivity extends AppCompatActivity {
             json.put("bank_name", binding.bankName.getEditText().getText().toString().trim());
             json.put("account_title", binding.accountTitle.getEditText().getText().toString().trim());
             json.put("account_number", binding.accountNumber.getEditText().getText().toString().trim());
-            String department_ID = "";
-            for (Department department : departmentsID) {
-                if (department.name.equals(binding.department.getEditText().getText().toString().trim())) {
-                    department_ID = department.id;
-                    Log.d(TAG, "savedInfo: " + department.id);
-                    break;
-                }
+            String department_ID = getDepartmentID();
+
+            if (department_ID.isEmpty()) {
+                progressDialog.dismiss();
+                binding.department.getEditText().setText("");
+                Toast.makeText(this, "Department is invalid", Toast.LENGTH_SHORT).show();
+                return;
             }
             json.put("department", department_ID);
+            Log.d(TAG, "create_device: " + json);
             JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, API.getLink("device-create"), json,
                     response -> {
                         progressDialog.dismiss();
@@ -336,6 +342,17 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
             e.printStackTrace();
         }
+    }
+
+    private String getDepartmentID() {
+        String department_ID = "";
+        for (Department department : departmentsID) {
+            if (department.name.equals(binding.department.getEditText().getText().toString().trim())) {
+                department_ID = department.id;
+                break;
+            }
+        }
+        return department_ID;
     }
 
 /*    private void create_department() {
@@ -380,13 +397,12 @@ public class MainActivity extends AppCompatActivity {
         deviceModel.device_ID = device;
         Log.d(TAG, "savedInfo: " + device);
         Log.d(TAG, "savedInfo: " + deviceModel.device_ID);
-        deviceModel.department_ID = "";
-        for (Department department : departmentsID) {
-            if (department.name.equals(binding.department.getEditText().getText().toString().trim())) {
-                deviceModel.department_ID = department.id;
-                Log.d(TAG, "savedInfo: " + department.id);
-                break;
-            }
+        deviceModel.department_ID = getDepartmentID();
+        if (deviceModel.department_ID.isEmpty()) {
+            progressDialog.dismiss();
+            binding.department.getEditText().setText("");
+            Toast.makeText(this, "Department is invalid", Toast.LENGTH_SHORT).show();
+            return;
         }
         deviceModel.device = binding.deviceName.getEditText().getText().toString();
         deviceModel.bankName = binding.bankName.getEditText().getText().toString();
@@ -431,54 +447,39 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean valid() {
-        if (binding.deviceName.getEditText().getText().toString().isEmpty()) {
+        if (binding.deviceName.getEditText().getText().toString().trim().isEmpty()) {
             Toast.makeText(this, "Device name is empty", Toast.LENGTH_SHORT).show();
             return false;
         }
-        if (binding.bankName.getEditText().getText().toString().isEmpty()) {
+        if (binding.bankName.getEditText().getText().toString().trim().isEmpty()) {
             Toast.makeText(this, "Bank name is empty", Toast.LENGTH_SHORT).show();
             return false;
         }
-        if (binding.accountTitle.getEditText().getText().toString().isEmpty()) {
+        if (binding.accountTitle.getEditText().getText().toString().trim().isEmpty()) {
             Toast.makeText(this, "Account Title is empty", Toast.LENGTH_SHORT).show();
             return false;
         }
-        if (binding.accountNumber.getEditText().getText().toString().isEmpty()) {
+        if (binding.accountNumber.getEditText().getText().toString().trim().isEmpty()) {
             Toast.makeText(this, "Account Name is empty", Toast.LENGTH_SHORT).show();
             return false;
         }
-        if (binding.department.getEditText().getText().toString().isEmpty()) {
+        if (binding.department.getEditText().getText().toString().trim().isEmpty()) {
             Toast.makeText(this, "Department is empty", Toast.LENGTH_SHORT).show();
             return false;
         }
         return true;
     }
 
-    public static String getSerialNumber() {
-        String serialNumber;
-        try {
-            Class<?> c = Class.forName("android.os.SystemProperties");
-            Method get = c.getMethod("get", String.class);
-            serialNumber = (String) get.invoke(c, "gsm.sn1");
-            if (serialNumber.equals(""))
-                serialNumber = (String) get.invoke(c, "ril.serialnumber");
-            if (serialNumber.equals(""))
-                serialNumber = (String) get.invoke(c, "ro.serialno");
-            if (serialNumber.equals(""))
-                serialNumber = (String) get.invoke(c, "sys.serialnumber");
-            if (serialNumber.equals(""))
-                serialNumber = Build.SERIAL;
-            if (serialNumber.equals(Build.UNKNOWN))
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    serialNumber = Build.getSerial();
-                } else serialNumber = "";
-        } catch (Exception e) {
-            Log.d(TAG, "getSerialNumber: " + e.getLocalizedMessage());
-            serialNumber = Build.SERIAL;
+    InputFilter alphanumericFilter = new InputFilter() {
+        @Override
+        public CharSequence filter(CharSequence source, int start, int end, Spanned dest, int dstart, int dend) {
+            // Regex to allow only numbers and alphanumeric characters
+            if (source.toString().matches("[a-zA-Z0-9]*")) {
+                return null; // Acceptable input
+            }
+            return ""; // Reject the input
         }
-        Log.d(TAG, "getSerialNumber: " + serialNumber);
-        return serialNumber;
-    }
+    };
 
     private static final String TAG = "MainActivity";
 
