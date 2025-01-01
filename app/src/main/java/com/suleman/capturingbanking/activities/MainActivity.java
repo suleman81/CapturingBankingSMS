@@ -41,7 +41,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
@@ -150,8 +149,8 @@ public class MainActivity extends AppCompatActivity {
         RequestQueue requestQueue = VolleySingleton.getInstance(this).getRequestQueue();
         JsonObjectRequest objectRequest = new JsonObjectRequest(Request.Method.GET, API.getRestoreLink(accountNumber), null, response -> {
             progressDialog.dismiss();
+            Log.d(TAG, "fetchData: " + response);
             try {
-                JSONObject result = response.getJSONObject("result");
                 String message = response.getString("message");
                 if (check) {
                     if (message.equals("Record not found")) {
@@ -159,11 +158,13 @@ public class MainActivity extends AppCompatActivity {
                         progressDialog.show();
                         create_device();
                     } else {
+                        JSONObject result = response.getJSONObject("result");
                         this.device = result.getString("_id");
                         updateInfo();
                     }
                 } else {
                     if (!message.equals("Record not found")) {
+                        JSONObject result = response.getJSONObject("result");
                         DeviceModel deviceModel = new DeviceModel();
                         deviceModel.device = result.getString("name");
                         deviceModel.bankName = result.getString("bank_name");
@@ -177,7 +178,9 @@ public class MainActivity extends AppCompatActivity {
 
                         updateUI(deviceModel);
                     } else {
-                        Toast.makeText(this, "Account number is invalid", Toast.LENGTH_SHORT).show();
+                        progressDialog.setMessage("Creating New Device...");
+                        progressDialog.show();
+                        create_device();
                     }
                 }
             } catch (JSONException e) {
@@ -186,11 +189,10 @@ public class MainActivity extends AppCompatActivity {
         }, error -> {
             Log.d(TAG, "fetchData: " + error.getLocalizedMessage());
             runOnUiThread(() -> {
-                progressDialog.dismiss();
-                Toast.makeText(this, "Account number is invalid", Toast.LENGTH_SHORT).show();
-//                progressDialog.setMessage("Creating New Device...");
-//                progressDialog.show();
-//                create_device();
+                //Toast.makeText(this, "Account number is invalid", Toast.LENGTH_SHORT).show();
+                progressDialog.setMessage("Creating New Device...");
+                progressDialog.show();
+                create_device();
             });
         });
         requestQueue.add(objectRequest);
@@ -299,6 +301,7 @@ public class MainActivity extends AppCompatActivity {
         });
         requestQueue.add(objectRequest);
     }
+
 
     private void create_device() {
         RequestQueue requestQueue = VolleySingleton.getInstance(this).getRequestQueue();
