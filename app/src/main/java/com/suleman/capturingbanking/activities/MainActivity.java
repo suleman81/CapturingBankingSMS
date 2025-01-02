@@ -1,5 +1,8 @@
 package com.suleman.capturingbanking.activities;
 
+import static com.suleman.capturingbanking.Utlis.above13Check;
+import static com.suleman.capturingbanking.Utlis.below13Check;
+
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -7,6 +10,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.drawable.ColorDrawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.InputFilter;
@@ -64,13 +68,19 @@ public class MainActivity extends AppCompatActivity {
         progressDialog.setCancelable(false);
         progressDialog.show();
 
+        binding.policy.setOnClickListener(v -> {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.blueirissoft.com/privacy-policy")));
+        });
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (above13Check()) {
+            if (above13Check(this)) {
                 startActivity(new Intent(this, PermissionActivity.class));
+                finish();
             }
         } else {
-            if (below13Check()) {
+            if (below13Check(this)) {
                 startActivity(new Intent(this, PermissionActivity.class));
+                finish();
             }
         }
 
@@ -491,19 +501,5 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private static final String TAG = "MainActivity";
-
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
-    private boolean above13Check() {
-        return ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED;
-    }
-
-    private boolean below13Check() {
-        return ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED;
-    }
 
 }
