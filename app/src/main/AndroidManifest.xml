@@ -6,25 +6,17 @@
         android:name="android.hardware.telephony"
         android:required="false" />
 
+    <!-- Basic permissions for network and notifications -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission
-        android:name="android.permission.READ_PRIVILEGED_PHONE_STATE"
-        tools:ignore="ProtectedPermissions" />
-    <uses-permission android:name="android.permission.READ_SMS" />
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <uses-permission android:name="android.permission.RECEIVE_SMS" />
-    <uses-permission android:name="com.suleman.capturingbankingsms.permission.C2D_MESSAGE" />
-    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
 
-    <permission
-        android:name="com.suleman.capturingbanking.permission.C2D_MESSAGE"
-        android:protectionLevel="signature" />
+    <!-- Required for receiving and reading SMS -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
 
     <queries>
         <intent>
-            <action android:name="Telephony.Sms.Intents.SMS_DELIVER_ACTION" />
+            <action android:name="android.provider.Telephony.SMS_RECEIVED" />
         </intent>
     </queries>
 
@@ -68,7 +60,6 @@
             <intent-filter>
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
                 <action android:name="com.google.android.gms.rcs.RECEIVE_RCS_MESSAGE" />
-                <action android:name="android.intent.action.PHONE_STATE" />
             </intent-filter>
         </receiver>
     </application>

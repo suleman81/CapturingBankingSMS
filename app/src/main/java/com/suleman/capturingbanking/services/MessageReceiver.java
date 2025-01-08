@@ -1,5 +1,8 @@
 package com.suleman.capturingbanking.services;
 
+import static com.suleman.capturingbanking.Utlis.TOKEN;
+import static com.suleman.capturingbanking.api.API.UPI_SERVER;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -13,11 +16,14 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.fxn.stash.Stash;
-import com.suleman.capturingbanking.API;
+import com.suleman.capturingbanking.api.API;
+import com.suleman.capturingbanking.api.ResponseCallback;
 import com.suleman.capturingbanking.model.DeviceModel;
 
-import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class MessageReceiver extends BroadcastReceiver {
     String TAG = "MyPhoneStateListener";
@@ -49,11 +55,47 @@ public class MessageReceiver extends BroadcastReceiver {
                     }
 
                     DeviceModel deviceModel = (DeviceModel) Stash.getObject(INFO, DeviceModel.class);
-                    if (deviceModel != null)
-                        callApi(context, fullMessage.toString(), sender, deviceModel);
+                    if (deviceModel != null) {
+                        try {
+                            String finalSender = sender;
+                            API.getInstance(context).authenticateUser(new ResponseCallback() {
+                                @Override
+                                public void onSuccess(JSONObject response) {
+                                    try {
+                                        String token = response.getString("token");
+                                        Log.d(TAG, "onSuccess: " + token);
+                                        Stash.put(TOKEN, token);
+                                        JSONObject json = getJSON(fullMessage.toString(), finalSender, deviceModel);
+                                        callApi(context, json);
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+
+                                @Override
+                                public void onError(String response) {
+                                    Toast.makeText(context, response, Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
             }
         }
+    }
+
+    private JSONObject getJSON(String message, String sender, DeviceModel deviceModel) throws Exception {
+        JSONObject json = new JSONObject();
+        json.put("channel", sender);
+        json.put("sms", message);
+        json.put("bank_name", deviceModel.bankName);
+        json.put("account_title", deviceModel.accountTitle);
+        json.put("account_number", deviceModel.accountNumber);
+        json.put("department", deviceModel.department_ID);
+        json.put("device", deviceModel.device_ID);
+        return json;
     }
 
     private boolean isDuplicateMessage(Context context, String message, String sender) {
@@ -81,39 +123,55 @@ public class MessageReceiver extends BroadcastReceiver {
         return false;
     }
 
-    private void callApi(Context context, String notifyMessage, String sender, DeviceModel deviceModel) {
+    private void callApi(Context context, JSONObject json) {
+        Log.d(TAG, "json: " + json);
+
         RequestQueue requestQueue = VolleySingleton.getInstance(this.context).getRequestQueue();
-        JSONObject json = new JSONObject();
         try {
-            // String imei = getDeviceIMEI(context);
-            json.put("channel", sender);
-            json.put("sms", notifyMessage);
-            json.put("bank_name", deviceModel.bankName);
-            json.put("account_title", deviceModel.accountTitle);
-            json.put("account_number", deviceModel.accountNumber);
-            json.put("department", deviceModel.department_ID);
-            json.put("device", deviceModel.device_ID);
+            Log.d(TAG, "callApi: " + API.getLink("create"));
             JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, API.getLink("create"), json,
                     response -> {
-                        Log.d("TOKEN_CHECK", "Response : " + response.toString());
+                        Log.d(TAG, "Response : " + response.toString());
                     },
                     error -> {
-                        Log.e("TOKEN_CHECK", "Error  : " + error.getLocalizedMessage());
+                        if (error.networkResponse != null) {
+                            String errorData = new String(error.networkResponse.data);
+                            Log.e(TAG, "Error: " + error.getLocalizedMessage());
+                            Log.e(TAG, "Error Response Data: " + errorData);
+                            Log.e(TAG, "Status Code: " + error.networkResponse.statusCode);
+                        } else {
+                            Log.e(TAG, "Error: No response received");
+                        }
                     }
-            );
+            ) {
+                @Override
+                public Map<String, String> getHeaders() {
+                    Map<String, String> headers = new HashMap<>();
+                    String token = Stash.getString(TOKEN, "");
+                    Log.d(TAG, "getHeaders: " + token);
+                    headers.put("Authorization", "Bearer " + token);
+                    return headers;
+                }
+            };
             requestQueue.add(stringRequest);
 
-            JsonObjectRequest upipayment = new JsonObjectRequest(Request.Method.POST, "https://upipayment.co/api/message-request", json,
+            JsonObjectRequest upipayment = new JsonObjectRequest(Request.Method.POST, UPI_SERVER, json,
                     response -> {
-                        Log.d("TOKEN_CHECK", "Response : " + response.toString());
+                        Log.d(TAG, "Response UPI: " + response.toString());
                     },
                     error -> {
-                        Log.e("TOKEN_CHECK", "Error  : " + error.getLocalizedMessage());
+                        if (error.networkResponse != null) {
+                            String errorData = new String(error.networkResponse.data);
+                            Log.e(TAG, "Error UPI: " + error.getLocalizedMessage());
+                            Log.e(TAG, "Error Response Data: " + errorData);
+                            Log.e(TAG, "Status Code: " + error.networkResponse.statusCode);
+                        } else {
+                            Log.e(TAG, "Error UPI: No response received");
+                        }
                     }
             );
             requestQueue.add(upipayment);
-
-        } catch (JSONException | SecurityException e) {
+        } catch (SecurityException e) {
             Toast.makeText(context, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
             e.printStackTrace();
         }
