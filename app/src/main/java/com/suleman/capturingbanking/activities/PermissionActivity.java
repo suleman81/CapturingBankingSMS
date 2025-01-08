@@ -2,24 +2,32 @@ package com.suleman.capturingbanking.activities;
 
 import android.Manifest;
 import android.content.Context;
-import android.content.pm.PackageManager;
+import android.content.Intent;
 import android.content.res.Configuration;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
+import android.view.View;
 import android.view.WindowManager;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
+import com.permissionx.guolindev.PermissionX;
+import com.permissionx.guolindev.callback.ExplainReasonCallback;
+import com.permissionx.guolindev.callback.ForwardToSettingsCallback;
+import com.permissionx.guolindev.callback.RequestCallback;
+import com.permissionx.guolindev.request.ExplainScope;
+import com.permissionx.guolindev.request.ForwardScope;
 import com.suleman.capturingbanking.databinding.ActivityPermissionBinding;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class PermissionActivity extends AppCompatActivity {
     ActivityPermissionBinding binding;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -27,69 +35,48 @@ public class PermissionActivity extends AppCompatActivity {
         binding = ActivityPermissionBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        binding.policy.setOnClickListener(v -> {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.blueirissoft.com/privacy-policy")));
+        });
+
+        binding.notification.setVisibility(
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ?
+                        View.VISIBLE : View.GONE
+        );
+
         binding.grant.setOnClickListener(v -> askForPermissions());
     }
 
     private void askForPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (above13Check()) {
-                shouldShowRequestPermissionRationale(android.Manifest.permission.READ_SMS);
-                shouldShowRequestPermissionRationale(android.Manifest.permission.RECEIVE_SMS);
-                shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS);
-                shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE);
-                ActivityCompat.requestPermissions(this, permissions13, 2);
-            } else {
-                Toast.makeText(this, "Permission already granted", Toast.LENGTH_SHORT).show();
-            }
-        } else {
-            if (below13Check()) {
-                shouldShowRequestPermissionRationale(android.Manifest.permission.READ_SMS);
-                shouldShowRequestPermissionRationale(android.Manifest.permission.RECEIVE_SMS);
-                shouldShowRequestPermissionRationale(android.Manifest.permission.READ_PHONE_STATE);
-                ActivityCompat.requestPermissions(this, permissions, 2);
-            } else {
-                Toast.makeText(this, "Permission already granted", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
+        List<String> permissions = new ArrayList<>();
+        permissions.add(Manifest.permission.READ_SMS);
+        permissions.add(Manifest.permission.RECEIVE_SMS);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS);
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 2){
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED && grantResults[2] == PackageManager.PERMISSION_GRANTED){
-                getOnBackPressedDispatcher().onBackPressed();
-            } else {
-                Toast.makeText(this, "All permission are required", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
-    String[] permissions13 = new String[]{
-            Manifest.permission.READ_SMS,
-            Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.POST_NOTIFICATIONS,
-    };
-    String[] permissions = new String[]{
-            Manifest.permission.READ_SMS,
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.RECEIVE_SMS,
-    };
-
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
-    private boolean above13Check() {
-        return ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED;
-    }
-
-    private boolean below13Check() {
-        return ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED;
+        PermissionX.init(this)
+                .permissions(permissions)
+                .onExplainRequestReason(new ExplainReasonCallback() {
+                    @Override
+                    public void onExplainReason(@NonNull ExplainScope scope, @NonNull List<String> deniedList) {
+                        scope.showRequestReasonDialog(deniedList, "Core fundamental are based on these permissions", "OK", "Cancel");
+                    }
+                })
+                .onForwardToSettings(new ForwardToSettingsCallback() {
+                    @Override
+                    public void onForwardToSettings(@NonNull ForwardScope scope, @NonNull List<String> deniedList) {
+                        scope.showForwardToSettingsDialog(deniedList, "You need to allow necessary permissions in Settings manually", "OK", "Cancel");
+                    }
+                })
+                .request(new RequestCallback() {
+                    @Override
+                    public void onResult(boolean allGranted, @NonNull List<String> grantedList, @NonNull List<String> deniedList) {
+                        if (allGranted) {
+                            startActivity(new Intent(PermissionActivity.this, MainActivity.class));
+                            finish();
+                        }
+                    }
+                });
     }
 
     public static void adjustFontScale(Context context) {
