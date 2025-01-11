@@ -224,6 +224,8 @@
         android:background="@color/black_trans"
         android:gravity="center"
         android:orientation="vertical"
+        android:clickable="true"
+        android:focusable="true"
         android:padding="16dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"

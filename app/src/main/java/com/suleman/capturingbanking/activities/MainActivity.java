@@ -1,8 +1,8 @@
 package com.suleman.capturingbanking.activities;
 
-import static com.suleman.capturingbanking.utilies.Utlis.TOKEN;
-import static com.suleman.capturingbanking.utilies.Utlis.above13Check;
-import static com.suleman.capturingbanking.utilies.Utlis.below13Check;
+import static com.suleman.capturingbanking.utilies.Utils.TOKEN;
+import static com.suleman.capturingbanking.utilies.Utils.above13Check;
+import static com.suleman.capturingbanking.utilies.Utils.below13Check;
 
 import android.app.Dialog;
 import android.app.ProgressDialog;
@@ -146,6 +146,7 @@ public class MainActivity extends AppCompatActivity {
                 public void onError(String response) {
                     progressDialog.dismiss();
                     binding.errorLayout.setVisibility(View.VISIBLE);
+                    binding.description.setText(response);
                     Toast.makeText(MainActivity.this, response, Toast.LENGTH_SHORT).show();
                 }
             });

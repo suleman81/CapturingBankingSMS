@@ -12,8 +12,8 @@ android {
         applicationId = "com.suleman.capturingbanking"
         minSdk = 23
         targetSdk = 34
-        versionCode = 12
-        versionName = "1.2.9"
+        versionCode = 13
+        versionName = "1.2.10"
         setProperty("archivesBaseName", "SecureSms-$versionName")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

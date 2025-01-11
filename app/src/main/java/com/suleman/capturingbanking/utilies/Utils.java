@@ -7,7 +7,7 @@ import android.os.Build;
 import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
 
-public class Utlis {
+public class Utils {
     public static final String TOKEN = "TOKEN";
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     public static boolean above13Check(Context context) {

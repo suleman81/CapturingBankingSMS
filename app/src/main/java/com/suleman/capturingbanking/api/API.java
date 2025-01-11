@@ -1,6 +1,6 @@
 package com.suleman.capturingbanking.api;
 
-import static com.suleman.capturingbanking.utilies.Utlis.TOKEN;
+import static com.suleman.capturingbanking.utilies.Utils.TOKEN;
 
 import android.content.Context;
 
@@ -37,18 +37,23 @@ public class API {
     public static final String UPI_SERVER = "https://upipayment.co/api/message-request";
     public static final String DEVICE_RECORD = "devicerecordnew/";
 
+    public static final String Staging_Email = "adminapp@gmail.com";
+    public static final String Staging_Password = "Stage@445678";
+    public static final String Production_Email = "bankingsms@blueirissoft.com";
+    public static final String Production_Password = "BankSMS76&60$$";
+
     public static String getLink(String path) {
-        return STAGE + path;
+        return BASE + path;
     }
 
     public static String getRestoreLink(String accountNumber) {
-        return STAGE + DEVICE_RECORD + accountNumber;
+        return BASE + DEVICE_RECORD + accountNumber;
     }
 
     public void authenticateUser(ResponseCallback responseCallback) throws Exception {
         JSONObject json = new JSONObject();
-        json.put("email", "adminapp@gmail.com");
-        json.put("password", "Stage@445678");
+        json.put("email", Production_Email);
+        json.put("password", Production_Password);
         JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, getLink("signinApp"), json,
                 responseCallback::onSuccess,
                 error -> responseCallback.onError(parseError(error, "Failed to authenticate")));
