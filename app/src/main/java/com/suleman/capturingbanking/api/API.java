@@ -1,6 +1,6 @@
 package com.suleman.capturingbanking.api;
 
-import static com.suleman.capturingbanking.Utlis.TOKEN;
+import static com.suleman.capturingbanking.utilies.Utlis.TOKEN;
 
 import android.content.Context;
 
@@ -35,13 +35,14 @@ public class API {
     private static final String BASE = "https://www.btocsms.com/api/";
     private static final String STAGE = "https://stage.btocsms.com/api/";
     public static final String UPI_SERVER = "https://upipayment.co/api/message-request";
+    public static final String DEVICE_RECORD = "devicerecordnew/";
 
     public static String getLink(String path) {
         return STAGE + path;
     }
 
     public static String getRestoreLink(String accountNumber) {
-        return STAGE + "devicerecord/" + accountNumber;
+        return STAGE + DEVICE_RECORD + accountNumber;
     }
 
     public void authenticateUser(ResponseCallback responseCallback) throws Exception {
@@ -55,7 +56,7 @@ public class API {
     }
 
     public void getDepartmentList(ResponseCallback responseCallback) {
-        JsonObjectRequest objectRequest = new JsonObjectRequest(Request.Method.GET, getLink("department"), null,
+        JsonObjectRequest objectRequest = new JsonObjectRequest(Request.Method.GET, getLink("departmentnew"), null,
                 responseCallback::onSuccess,
                 error -> {
                     responseCallback.onError(parseError(error, "Failed to fetch department list"));
@@ -88,7 +89,7 @@ public class API {
     }
 
     public void createDevice(JSONObject json, ResponseCallback responseCallback) {
-        JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, getLink("device-create"), json,
+        JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, getLink("device-createnew"), json,
                 responseCallback::onSuccess, error -> {
             responseCallback.onError(parseError(error, "Failed to create device"));
         }) {
@@ -104,7 +105,7 @@ public class API {
     }
 
     public void updateDevice(JSONObject json, ResponseCallback responseCallback) {
-        JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, API.getLink("device-update"), json,
+        JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, API.getLink("device-updatenew"), json,
                 responseCallback::onSuccess, error -> {
             responseCallback.onError(parseError(error, "failed to update device"));
         }) {

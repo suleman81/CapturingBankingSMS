@@ -1,4 +1,4 @@
-package com.suleman.capturingbanking;
+package com.suleman.capturingbanking.utilies;
 
 import android.content.Context;
 import android.content.pm.PackageManager;

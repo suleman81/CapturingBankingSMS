@@ -1,8 +1,8 @@
 package com.suleman.capturingbanking.activities;
 
-import static com.suleman.capturingbanking.Utlis.TOKEN;
-import static com.suleman.capturingbanking.Utlis.above13Check;
-import static com.suleman.capturingbanking.Utlis.below13Check;
+import static com.suleman.capturingbanking.utilies.Utlis.TOKEN;
+import static com.suleman.capturingbanking.utilies.Utlis.above13Check;
+import static com.suleman.capturingbanking.utilies.Utlis.below13Check;
 
 import android.app.Dialog;
 import android.app.ProgressDialog;
@@ -16,6 +16,7 @@ import android.os.Bundle;
 import android.text.InputFilter;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
@@ -25,9 +26,6 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.toolbox.JsonObjectRequest;
 import com.fxn.stash.Stash;
 import com.google.android.material.textfield.TextInputLayout;
 import com.suleman.capturingbanking.R;
@@ -37,6 +35,7 @@ import com.suleman.capturingbanking.databinding.ActivityMainBinding;
 import com.suleman.capturingbanking.model.Department;
 import com.suleman.capturingbanking.model.DeviceModel;
 import com.suleman.capturingbanking.services.MessageReceiver;
+import com.suleman.capturingbanking.utilies.NetworkUtils;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -73,7 +72,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         init();
-        authenticateUser();
+        if (NetworkUtils.isInternetAvailable(this))
+            authenticateUser();
+        else {
+            binding.errorLayout.setVisibility(View.VISIBLE);
+        }
 
         binding.save.setOnClickListener(v -> {
             if (!binding.save.getText().toString().equals("Edit")) {
@@ -90,6 +93,12 @@ public class MainActivity extends AppCompatActivity {
         binding.restore.setOnClickListener(v -> {
             restoreData();
         });
+        binding.retry.setOnClickListener(v -> {
+            recreate();
+        });
+        binding.refresh.setOnClickListener(v -> {
+            getDepartmentList();
+        });
         binding.policy.setOnClickListener(v -> {
             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.blueirissoft.com/privacy-policy")));
         });
@@ -99,8 +108,6 @@ public class MainActivity extends AppCompatActivity {
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("Authenticating Please wait...");
         progressDialog.setCancelable(false);
-        progressDialog.show();
-
 
         binding.accountNumber.getEditText().setFilters(new InputFilter[]{alphanumericFilter});
         if (Stash.getObject(MessageReceiver.INFO, DeviceModel.class) != null) {
@@ -120,6 +127,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void authenticateUser() {
+        progressDialog.show();
         try {
             API.getInstance(this).authenticateUser(new ResponseCallback() {
                 @Override
@@ -137,6 +145,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onError(String response) {
                     progressDialog.dismiss();
+                    binding.errorLayout.setVisibility(View.VISIBLE);
                     Toast.makeText(MainActivity.this, response, Toast.LENGTH_SHORT).show();
                 }
             });
