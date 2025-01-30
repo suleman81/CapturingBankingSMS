@@ -96,11 +96,48 @@ public class MainActivity extends AppCompatActivity {
         binding.retry.setOnClickListener(v -> {
             recreate();
         });
+        binding.refreshData.setOnClickListener(v -> {
+            if (device == null) {
+                Toast.makeText(this, "Device ID Not Found", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            refreshData();
+        });
         binding.refresh.setOnClickListener(v -> {
             getDepartmentList();
         });
         binding.policy.setOnClickListener(v -> {
             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.blueirissoft.com/privacy-policy")));
+        });
+    }
+
+    private void refreshData() {
+        progressDialog.setMessage("Please Wait...");
+        progressDialog.show();
+        API.getInstance(this).restoreDevice(device, new ResponseCallback() {
+            @Override
+            public void onSuccess(JSONObject response) {
+                progressDialog.dismiss();
+                try {
+                    String message = response.getString("message");
+                    if (message.equals(getString(R.string.succes_message))) {
+                        JSONObject result = response.getJSONObject("result");
+                        DeviceModel deviceModel = getDevice(result);
+                        MainActivity.this.device = deviceModel.device_ID;
+                        updateUI(deviceModel);
+                    } else {
+                        Toast.makeText(MainActivity.this, "Failed to Restore Data", Toast.LENGTH_SHORT).show();
+                    }
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onError(String response) {
+                progressDialog.dismiss();
+                Toast.makeText(MainActivity.this, response, Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
@@ -207,7 +244,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             String message = response.getString("message");
             if (check) {
-                if (message.equals("Record not found")) {
+                if (message.equals(getString(R.string.fail_message))) {
                     progressDialog.setMessage("Creating New Device...");
                     progressDialog.show();
                     create_device();
@@ -217,7 +254,7 @@ public class MainActivity extends AppCompatActivity {
                     updateInfo();
                 }
             } else {
-                if (!message.equals("Record not found")) {
+                if (message.equals(getString(R.string.succes_message))) {
                     JSONObject result = response.getJSONObject("result");
                     DeviceModel deviceModel = getDevice(result);
                     MainActivity.this.device = deviceModel.device_ID;

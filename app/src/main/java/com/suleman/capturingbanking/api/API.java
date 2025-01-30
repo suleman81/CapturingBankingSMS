@@ -3,6 +3,7 @@ package com.suleman.capturingbanking.api;
 import static com.suleman.capturingbanking.utilies.Utils.TOKEN;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -39,21 +40,29 @@ public class API {
 
     public static final String Staging_Email = "adminapp@gmail.com";
     public static final String Staging_Password = "Stage@445678";
+
+    public static final String Staging_Email2 = "stage@blueirissoft.com";
+    public static final String Staging_Password2 = "stage123";
     public static final String Production_Email = "bankingsms@blueirissoft.com";
     public static final String Production_Password = "BankSMS76&60$$";
 
     public static String getLink(String path) {
-        return BASE + path;
+        return STAGE + path;
     }
 
     public static String getRestoreLink(String accountNumber) {
-        return BASE + DEVICE_RECORD + accountNumber;
+        return STAGE + "device/" + accountNumber;
+    }
+
+    public static String getRestoreDeviceLink(String deviceID) {
+        return STAGE + DEVICE_RECORD + deviceID;
     }
 
     public void authenticateUser(ResponseCallback responseCallback) throws Exception {
+        Log.d(TAG, "authenticateUser: " + getLink("signinApp"));
         JSONObject json = new JSONObject();
-        json.put("email", Production_Email);
-        json.put("password", Production_Password);
+        json.put("email", Staging_Email2);
+        json.put("password", Staging_Password2);
         JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, getLink("signinApp"), json,
                 responseCallback::onSuccess,
                 error -> responseCallback.onError(parseError(error, "Failed to authenticate")));
@@ -61,6 +70,7 @@ public class API {
     }
 
     public void getDepartmentList(ResponseCallback responseCallback) {
+        Log.d(TAG, "getDepartmentList: " + getLink("departmentnew"));
         JsonObjectRequest objectRequest = new JsonObjectRequest(Request.Method.GET, getLink("departmentnew"), null,
                 responseCallback::onSuccess,
                 error -> {
@@ -78,6 +88,7 @@ public class API {
     }
 
     public void fetchData(String accountNumber, ResponseCallback responseCallback) {
+        Log.d(TAG, "fetchData: " + getRestoreLink(accountNumber));
         JsonObjectRequest objectRequest = new JsonObjectRequest(Request.Method.GET, getRestoreLink(accountNumber), null,
                 responseCallback::onSuccess, error -> {
             responseCallback.onError(parseError(error, "Failed to fetch data"));
@@ -93,8 +104,27 @@ public class API {
         requestQueue.add(objectRequest);
     }
 
+    private static final String TAG = "API";
+    public void restoreDevice(String deviceID, ResponseCallback responseCallback) {
+        Log.d(TAG, "restoreDevice: " + getRestoreDeviceLink(deviceID));
+        JsonObjectRequest objectRequest = new JsonObjectRequest(Request.Method.GET, getRestoreDeviceLink(deviceID), null,
+                responseCallback::onSuccess, error -> {
+            responseCallback.onError(parseError(error, "Failed to Restore Data"));
+        }) {
+            @Override
+            public Map<String, String> getHeaders() {
+                Map<String, String> headers = new HashMap<>();
+                String token = Stash.getString(TOKEN, "");
+                headers.put("Authorization", "Bearer " + token);
+                return headers;
+            }
+        };
+        requestQueue.add(objectRequest);
+    }
+
     public void createDevice(JSONObject json, ResponseCallback responseCallback) {
-        JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, getLink("device-createnew"), json,
+        Log.d(TAG, "createDevice: " + getLink("device-create"));
+        JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, getLink("device-create"), json,
                 responseCallback::onSuccess, error -> {
             responseCallback.onError(parseError(error, "Failed to create device"));
         }) {
@@ -110,6 +140,7 @@ public class API {
     }
 
     public void updateDevice(JSONObject json, ResponseCallback responseCallback) {
+        Log.d(TAG, "createDevice: " + getLink("device-updatenew"));
         JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, API.getLink("device-updatenew"), json,
                 responseCallback::onSuccess, error -> {
             responseCallback.onError(parseError(error, "failed to update device"));
@@ -129,6 +160,7 @@ public class API {
         try {
             String errorBody = new String(error.networkResponse.data, StandardCharsets.UTF_8);
             JSONObject jsonError = new JSONObject(errorBody);
+            Stash.put("DATA", jsonError.toString());
             return jsonError.getString("message");
         } catch (Exception e) {
             e.printStackTrace();

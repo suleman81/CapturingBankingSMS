@@ -6,4 +6,6 @@
     <string name="internet">We utilize this permission to securely transmit these messages to our server for processing and analysis.</string>
     <string name="notification">This permission is used to detect any incoming messages.</string>
     <string name="privacy_policy"><u>Privacy Policy</u></string>
+    <string name="succes_message">Record fetched successfully</string>
+    <string name="fail_message">Record not found</string>
 </resources>
