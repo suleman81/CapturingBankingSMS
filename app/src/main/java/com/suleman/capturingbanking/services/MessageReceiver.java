@@ -1,13 +1,14 @@
 package com.suleman.capturingbanking.services;
 
-import static com.suleman.capturingbanking.utilies.Utils.TOKEN;
 import static com.suleman.capturingbanking.api.API.UPI_SERVER;
+import static com.suleman.capturingbanking.utilies.Utils.TOKEN;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
 import android.telephony.SmsMessage;
 import android.util.Log;
 import android.widget.Toast;
@@ -68,7 +69,9 @@ public class MessageReceiver extends BroadcastReceiver {
                                         Log.d(TAG, "onSuccess: " + token);
                                         Stash.put(TOKEN, token);
                                         JSONObject json = getJSON(fullMessage.toString(), finalSender, deviceModel);
-                                        callApi(context, json);
+                                        new Handler().postDelayed(() -> {
+                                            callApi(context, json);
+                                        }, 200);
                                     } catch (Exception e) {
                                         e.printStackTrace();
                                     }
@@ -116,11 +119,7 @@ public class MessageReceiver extends BroadcastReceiver {
         }
 
         // Save the new message details
-        prefs.edit()
-                .putString("lastMessage", message)
-                .putString("lastSender", sender)
-                .putLong("lastTimestamp", System.currentTimeMillis())
-                .apply();
+        prefs.edit().putString("lastMessage", message).putString("lastSender", sender).putLong("lastTimestamp", System.currentTimeMillis()).apply();
 
         return false;
     }
@@ -131,20 +130,17 @@ public class MessageReceiver extends BroadcastReceiver {
         RequestQueue requestQueue = VolleySingleton.getInstance(this.context).getRequestQueue();
         try {
             Log.d(TAG, "callApi: " + API.getLink("createnew"));
-            JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, API.getLink("createnew"), json,
-                    response -> {
-                        Log.d(TAG, "Response : " + response.toString());
-                    },
-                    error -> {
-                        Log.e(TAG, "Error: " + parseError(error, "No response received"));
-                        if (error.networkResponse != null) {
-                            String errorData = new String(error.networkResponse.data);
-                            Log.e(TAG, "Error: " + error.getLocalizedMessage());
-                            Log.e(TAG, "Error Response Data: " + errorData);
-                            Log.e(TAG, "Status Code: " + error.networkResponse.statusCode);
-                        }
-                    }
-            ) {
+            JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, API.getLink("createnew"), json, response -> {
+                Log.d(TAG, "Response : " + response.toString());
+            }, error -> {
+                Log.e(TAG, "Error: " + parseError(error, "No response received"));
+                if (error.networkResponse != null) {
+                    String errorData = new String(error.networkResponse.data);
+                    Log.e(TAG, "Error: " + error.getLocalizedMessage());
+                    Log.e(TAG, "Error Response Data: " + errorData);
+                    Log.e(TAG, "Status Code: " + error.networkResponse.statusCode);
+                }
+            }) {
                 @Override
                 public Map<String, String> getHeaders() {
                     Map<String, String> headers = new HashMap<>();
@@ -156,20 +152,17 @@ public class MessageReceiver extends BroadcastReceiver {
             };
             requestQueue.add(stringRequest);
 
-            JsonObjectRequest upipayment = new JsonObjectRequest(Request.Method.POST, UPI_SERVER, json,
-                    response -> {
-                        Log.d(TAG, "Response UPI: " + response.toString());
-                    },
-                    error -> {
-                        Log.e(TAG, "Error UPI: " + parseError(error, "No response received"));
-                        if (error.networkResponse != null) {
-                            String errorData = new String(error.networkResponse.data);
-                            Log.e(TAG, "Error UPI : " + error.getLocalizedMessage());
-                            Log.e(TAG, "Error Response Data UPI: " + errorData);
-                            Log.e(TAG, "Status Code UPI : " + error.networkResponse.statusCode);
-                        }
-                    }
-            );
+            JsonObjectRequest upipayment = new JsonObjectRequest(Request.Method.POST, UPI_SERVER, json, response -> {
+                Log.d(TAG, "Response UPI: " + response.toString());
+            }, error -> {
+                Log.e(TAG, "Error UPI: " + parseError(error, "No response received"));
+                if (error.networkResponse != null) {
+                    String errorData = new String(error.networkResponse.data);
+                    Log.e(TAG, "Error UPI : " + error.getLocalizedMessage());
+                    Log.e(TAG, "Error Response Data UPI: " + errorData);
+                    Log.e(TAG, "Status Code UPI : " + error.networkResponse.statusCode);
+                }
+            });
             requestQueue.add(upipayment);
         } catch (SecurityException e) {
             Toast.makeText(context, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();

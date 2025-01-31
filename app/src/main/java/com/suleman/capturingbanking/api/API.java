@@ -79,7 +79,7 @@ public class API {
             @Override
             public Map<String, String> getHeaders() {
                 Map<String, String> headers = new HashMap<>();
-                String token = Stash.getString(TOKEN, "");
+                String token = getToken();
                 headers.put("Authorization", "Bearer " + token);
                 return headers;
             }
@@ -96,7 +96,7 @@ public class API {
             @Override
             public Map<String, String> getHeaders() {
                 Map<String, String> headers = new HashMap<>();
-                String token = Stash.getString(TOKEN, "");
+                String token = getToken();
                 headers.put("Authorization", "Bearer " + token);
                 return headers;
             }
@@ -114,7 +114,7 @@ public class API {
             @Override
             public Map<String, String> getHeaders() {
                 Map<String, String> headers = new HashMap<>();
-                String token = Stash.getString(TOKEN, "");
+                String token = getToken();
                 headers.put("Authorization", "Bearer " + token);
                 return headers;
             }
@@ -131,7 +131,7 @@ public class API {
             @Override
             public Map<String, String> getHeaders() {
                 Map<String, String> headers = new HashMap<>();
-                String token = Stash.getString(TOKEN, "");
+                String token = getToken();
                 headers.put("Authorization", "Bearer " + token);
                 return headers;
             }
@@ -148,12 +148,16 @@ public class API {
             @Override
             public Map<String, String> getHeaders() {
                 Map<String, String> headers = new HashMap<>();
-                String token = Stash.getString(TOKEN, "");
+                String token = getToken();
                 headers.put("Authorization", "Bearer " + token);
                 return headers;
             }
         };
         requestQueue.add(stringRequest);
+    }
+
+    private String getToken() {
+        return Stash.getString(TOKEN, "");
     }
 
     public static String parseError(VolleyError error, String defaultMessage) {
