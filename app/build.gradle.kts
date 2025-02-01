@@ -9,8 +9,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-         applicationId = "com.suleman.capturingbanking" // Staging ID
-//        applicationId = "com.suleman.capturingbankingsms" // Production ID
+        applicationId = "com.suleman.capturingbanking"
         minSdk = 23
         targetSdk = 34
         versionCode = 14

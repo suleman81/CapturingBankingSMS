@@ -47,22 +47,22 @@ public class API {
     public static final String Production_Password = "BankSMS76&60$$";
 
     public static String getLink(String path) {
-        return STAGE + path;
+        return BASE + path;
     }
 
     public static String getRestoreLink(String accountNumber) {
-        return STAGE + "device/" + accountNumber;
+        return BASE + "device/" + accountNumber;
     }
 
     public static String getRestoreDeviceLink(String deviceID) {
-        return STAGE + DEVICE_RECORD + deviceID;
+        return BASE + DEVICE_RECORD + deviceID;
     }
 
     public void authenticateUser(ResponseCallback responseCallback) throws Exception {
         Log.d(TAG, "authenticateUser: " + getLink("signinApp"));
         JSONObject json = new JSONObject();
-        json.put("email", Staging_Email2);
-        json.put("password", Staging_Password2);
+        json.put("email", Production_Email);
+        json.put("password", Production_Password);
         JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, getLink("signinApp"), json,
                 responseCallback::onSuccess,
                 error -> responseCallback.onError(parseError(error, "Failed to authenticate")));
