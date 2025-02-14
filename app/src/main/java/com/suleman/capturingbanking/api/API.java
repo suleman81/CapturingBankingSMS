@@ -36,33 +36,31 @@ public class API {
     private static final String BASE = "https://www.btocsms.com/api/";
     private static final String STAGE = "https://stage.btocsms.com/api/";
     public static final String UPI_SERVER = "https://upipayment.co/api/message-request";
+    public static final String UPI_SERVER_STAGING = "https://stage.upipayment.co/api/message-request";
     public static final String DEVICE_RECORD = "devicerecordnew/";
-
-    public static final String Staging_Email = "adminapp@gmail.com";
-    public static final String Staging_Password = "Stage@445678";
-
+    public static final String DEVICE_RECORD_BY_ID = "devicerecordnewbyid/";
     public static final String Staging_Email2 = "stage@blueirissoft.com";
     public static final String Staging_Password2 = "stage123";
     public static final String Production_Email = "bankingsms@blueirissoft.com";
     public static final String Production_Password = "BankSMS76&60$$";
 
     public static String getLink(String path) {
-        return BASE + path;
+        return STAGE + path;
     }
 
     public static String getRestoreLink(String accountNumber) {
-        return BASE + "device/" + accountNumber;
+        return STAGE + DEVICE_RECORD + accountNumber;
     }
 
     public static String getRestoreDeviceLink(String deviceID) {
-        return BASE + DEVICE_RECORD + deviceID;
+        return STAGE + DEVICE_RECORD_BY_ID + deviceID;
     }
 
     public void authenticateUser(ResponseCallback responseCallback) throws Exception {
         Log.d(TAG, "authenticateUser: " + getLink("signinApp"));
         JSONObject json = new JSONObject();
-        json.put("email", Production_Email);
-        json.put("password", Production_Password);
+        json.put("email", Staging_Email2);
+        json.put("password", Staging_Password2);
         JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, getLink("signinApp"), json,
                 responseCallback::onSuccess,
                 error -> responseCallback.onError(parseError(error, "Failed to authenticate")));
@@ -109,7 +107,7 @@ public class API {
         Log.d(TAG, "restoreDevice: " + getRestoreDeviceLink(deviceID));
         JsonObjectRequest objectRequest = new JsonObjectRequest(Request.Method.GET, getRestoreDeviceLink(deviceID), null,
                 responseCallback::onSuccess, error -> {
-            responseCallback.onError(parseError(error, "Failed to Restore Data"));
+            responseCallback.onError(parseError(error, "Failed to Refresh Data"));
         }) {
             @Override
             public Map<String, String> getHeaders() {

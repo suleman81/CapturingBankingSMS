@@ -24,6 +24,10 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.fxn.stash.Stash;
@@ -35,7 +39,9 @@ import com.suleman.capturingbanking.databinding.ActivityMainBinding;
 import com.suleman.capturingbanking.model.Department;
 import com.suleman.capturingbanking.model.DeviceModel;
 import com.suleman.capturingbanking.services.MessageReceiver;
+import com.suleman.capturingbanking.utilies.InAppUpdateHelper;
 import com.suleman.capturingbanking.utilies.NetworkUtils;
+import com.suleman.capturingbanking.utilies.Utils;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -44,13 +50,14 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
-
     ActivityMainBinding binding;
     ProgressDialog progressDialog;
     String device;
     ArrayList<String> departments = new ArrayList<>();
     ArrayList<Department> departmentsID = new ArrayList<>();
     public String token = "";
+    private InAppUpdateHelper inAppUpdateHelper;
+    ActivityResultLauncher activityResultLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +65,8 @@ public class MainActivity extends AppCompatActivity {
         adjustFontScale(MainActivity.this);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        Utils.checkApp(this);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (above13Check(this)) {
@@ -70,6 +79,21 @@ public class MainActivity extends AppCompatActivity {
                 finish();
             }
         }
+
+        activityResultLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartIntentSenderForResult(),
+                new ActivityResultCallback<ActivityResult>() {
+                    @Override
+                    public void onActivityResult(ActivityResult result) {
+                        if (result.getResultCode() != RESULT_OK) {
+                            Log.d("HELLO", "Update flow failed! Result code: " + result.getResultCode());
+                        }
+                    }
+                }
+        );
+
+        inAppUpdateHelper = new InAppUpdateHelper(this, activityResultLauncher);
+        inAppUpdateHelper.checkForUpdate();
 
         init();
         if (NetworkUtils.isInternetAvailable(this))
@@ -126,9 +150,12 @@ public class MainActivity extends AppCompatActivity {
                         MainActivity.this.device = deviceModel.device_ID;
                         updateUI(deviceModel);
                     } else {
-                        Toast.makeText(MainActivity.this, "Failed to Restore Data", Toast.LENGTH_SHORT).show();
+                        DeviceModel deviceModel = new DeviceModel();
+                        deviceModel.setEmpty();
+                        MainActivity.this.device = null;
+                        updateUI(deviceModel);
                     }
-                } catch (Exception e){
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
@@ -147,10 +174,11 @@ public class MainActivity extends AppCompatActivity {
         progressDialog.setCancelable(false);
 
         binding.accountNumber.getEditText().setFilters(new InputFilter[]{alphanumericFilter});
-        if (Stash.getObject(MessageReceiver.INFO, DeviceModel.class) != null) {
-            DeviceModel deviceModel = (DeviceModel) Stash.getObject(MessageReceiver.INFO, DeviceModel.class);
+        DeviceModel deviceModel = (DeviceModel) Stash.getObject(MessageReceiver.INFO, DeviceModel.class);
+        if (deviceModel != null && !deviceModel.isAllEmpty()) {
             setText(deviceModel);
             enableUI(false);
+            this.device = deviceModel.device_ID;
             binding.save.setText("Edit");
         }
     }
@@ -232,10 +260,11 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onError(String response) {
-                Toast.makeText(MainActivity.this, response, Toast.LENGTH_SHORT).show();
-                progressDialog.setMessage("Creating New Device...");
-                progressDialog.show();
-                create_device();
+                if (check) {
+                    create_device();
+                } else {
+                    Toast.makeText(MainActivity.this, response, Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }
@@ -243,10 +272,9 @@ public class MainActivity extends AppCompatActivity {
     private void handleFetchData(JSONObject response, boolean check) {
         try {
             String message = response.getString("message");
+            Log.d(TAG, "handleFetchData: " + message);
             if (check) {
                 if (message.equals(getString(R.string.fail_message))) {
-                    progressDialog.setMessage("Creating New Device...");
-                    progressDialog.show();
                     create_device();
                 } else {
                     JSONObject result = response.getJSONObject("result");
@@ -260,9 +288,7 @@ public class MainActivity extends AppCompatActivity {
                     MainActivity.this.device = deviceModel.device_ID;
                     updateUI(deviceModel);
                 } else {
-                    progressDialog.setMessage("Creating New Device...");
-                    progressDialog.show();
-                    create_device();
+                    Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
                 }
             }
         } catch (Exception e) {
@@ -276,6 +302,7 @@ public class MainActivity extends AppCompatActivity {
         deviceModel.bankName = result.getString("bank_name");
         deviceModel.accountTitle = result.getString("account_title");
         deviceModel.accountNumber = result.getString("account_number");
+        Log.d(TAG, "getDevice: " + deviceModel.accountNumber);
         deviceModel.device_ID = result.getString("_id");
         deviceModel.department = result.getJSONObject("department").getString("name");
         deviceModel.department_ID = result.getJSONObject("department").getString("_id");
@@ -359,6 +386,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void create_device() {
+        progressDialog.setMessage("Creating New Device...");
+        progressDialog.show();
         try {
             JSONObject json = getCreateDeviceData();
             API.getInstance(this).createDevice(json, new ResponseCallback() {
@@ -462,6 +491,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setDepartmentAdapter(JSONArray result) throws Exception {
+        departmentsID.clear();
+        departments.clear();
         for (int i = 0; i < result.length(); i++) {
             JSONObject object = result.getJSONObject(i);
             departmentsID.add(new Department(object.getString("_id"), object.getString("name")));
@@ -485,7 +516,7 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
         if (binding.accountNumber.getEditText().getText().toString().trim().isEmpty()) {
-            Toast.makeText(this, "Account Name is empty", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Account number is empty", Toast.LENGTH_SHORT).show();
             return false;
         }
         if (binding.department.getEditText().getText().toString().trim().isEmpty()) {
@@ -496,11 +527,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     InputFilter alphanumericFilter = (source, start, end, dest, dstart, dend) -> {
-        // Regex to allow only numbers and alphanumeric characters
         if (source.toString().matches("[a-zA-Z0-9]*")) {
-            return null; // Acceptable input
+            return null;
         }
-        return ""; // Reject the input
+        return "";
     };
 
     private static final String TAG = "MainActivity";

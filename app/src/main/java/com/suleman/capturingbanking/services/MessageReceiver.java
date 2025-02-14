@@ -1,6 +1,7 @@
 package com.suleman.capturingbanking.services;
 
 import static com.suleman.capturingbanking.api.API.UPI_SERVER;
+import static com.suleman.capturingbanking.api.API.UPI_SERVER_STAGING;
 import static com.suleman.capturingbanking.utilies.Utils.TOKEN;
 
 import android.content.BroadcastReceiver;
@@ -152,7 +153,7 @@ public class MessageReceiver extends BroadcastReceiver {
             };
             requestQueue.add(stringRequest);
 
-            JsonObjectRequest upipayment = new JsonObjectRequest(Request.Method.POST, UPI_SERVER, json, response -> {
+            JsonObjectRequest upipayment = new JsonObjectRequest(Request.Method.POST, UPI_SERVER_STAGING, json, response -> {
                 Log.d(TAG, "Response UPI: " + response.toString());
             }, error -> {
                 Log.e(TAG, "Error UPI: " + parseError(error, "No response received"));
