@@ -20,6 +20,7 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.fxn.stash.Stash;
 import com.suleman.capturingbanking.api.API;
 import com.suleman.capturingbanking.api.ResponseCallback;
+import com.suleman.capturingbanking.api.ServerConnector;
 import com.suleman.capturingbanking.model.DeviceModel;
 
 import org.json.JSONObject;
@@ -61,13 +62,10 @@ public class MessageReceiver extends BroadcastReceiver {
                     if (deviceModel != null) {
                         try {
                             String finalSender = sender;
-                            API.getInstance(context).authenticateUser(new ResponseCallback() {
+                            ServerConnector.getInstance().loginUser(new ResponseCallback() {
                                 @Override
-                                public void onSuccess(JSONObject response) {
+                                public void onSuccess(Object response) {
                                     try {
-                                        String token = response.getString("token");
-                                        Log.d(TAG, "onSuccess: " + token);
-                                        Stash.put(TOKEN, token);
                                         JSONObject json = getJSON(fullMessage.toString(), finalSender, deviceModel);
                                         new Handler().postDelayed(() -> {
                                             callApi(context, json);

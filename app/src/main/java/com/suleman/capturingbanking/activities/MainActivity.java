@@ -1,6 +1,5 @@
 package com.suleman.capturingbanking.activities;
 
-import static com.suleman.capturingbanking.utilies.Utils.TOKEN;
 import static com.suleman.capturingbanking.utilies.Utils.above13Check;
 import static com.suleman.capturingbanking.utilies.Utils.below13Check;
 
@@ -33,21 +32,21 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.fxn.stash.Stash;
 import com.google.android.material.textfield.TextInputLayout;
 import com.suleman.capturingbanking.R;
-import com.suleman.capturingbanking.api.API;
 import com.suleman.capturingbanking.api.ResponseCallback;
+import com.suleman.capturingbanking.api.ServerConnector;
+import com.suleman.capturingbanking.api.response_models.CreateDeviceRequest;
 import com.suleman.capturingbanking.databinding.ActivityMainBinding;
 import com.suleman.capturingbanking.model.Department;
 import com.suleman.capturingbanking.model.DeviceModel;
+import com.suleman.capturingbanking.model.DeviceRecord;
+import com.suleman.capturingbanking.model.NewDeviceRecord;
 import com.suleman.capturingbanking.services.MessageReceiver;
 import com.suleman.capturingbanking.utilies.InAppUpdateHelper;
 import com.suleman.capturingbanking.utilies.NetworkUtils;
 import com.suleman.capturingbanking.utilies.Utils;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     ActivityMainBinding binding;
@@ -80,24 +79,20 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        activityResultLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartIntentSenderForResult(),
-                new ActivityResultCallback<ActivityResult>() {
-                    @Override
-                    public void onActivityResult(ActivityResult result) {
-                        if (result.getResultCode() != RESULT_OK) {
-                            Log.d("HELLO", "Update flow failed! Result code: " + result.getResultCode());
-                        }
-                    }
+        activityResultLauncher = registerForActivityResult(new ActivityResultContracts.StartIntentSenderForResult(), new ActivityResultCallback<ActivityResult>() {
+            @Override
+            public void onActivityResult(ActivityResult result) {
+                if (result.getResultCode() != RESULT_OK) {
+                    Log.d("HELLO", "Update flow failed! Result code: " + result.getResultCode());
                 }
-        );
+            }
+        });
 
         inAppUpdateHelper = new InAppUpdateHelper(this, activityResultLauncher);
         inAppUpdateHelper.checkForUpdate();
 
         init();
-        if (NetworkUtils.isInternetAvailable(this))
-            authenticateUser();
+        if (NetworkUtils.isInternetAvailable(this)) authenticateUser();
         else {
             binding.errorLayout.setVisibility(View.VISIBLE);
         }
@@ -138,32 +133,28 @@ public class MainActivity extends AppCompatActivity {
     private void refreshData() {
         progressDialog.setMessage("Please Wait...");
         progressDialog.show();
-        API.getInstance(this).restoreDevice(device, new ResponseCallback() {
+        ServerConnector.getInstance().getDeviceRecordById(device, new ResponseCallback() {
             @Override
-            public void onSuccess(JSONObject response) {
+            public void onSuccess(Object response) {
                 progressDialog.dismiss();
-                try {
-                    String message = response.getString("message");
-                    if (message.equals(getString(R.string.succes_message))) {
-                        JSONObject result = response.getJSONObject("result");
-                        DeviceModel deviceModel = getDevice(result);
+                if (response instanceof String) {
+                    DeviceModel deviceModel = new DeviceModel();
+                    deviceModel.setEmpty();
+                    MainActivity.this.device = null;
+                    updateUI(deviceModel);
+                } else {
+                    if (response instanceof DeviceRecord record) {
+                        DeviceModel deviceModel = getDevice(record);
                         MainActivity.this.device = deviceModel.device_ID;
                         updateUI(deviceModel);
-                    } else {
-                        DeviceModel deviceModel = new DeviceModel();
-                        deviceModel.setEmpty();
-                        MainActivity.this.device = null;
-                        updateUI(deviceModel);
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
                 }
             }
 
             @Override
             public void onError(String response) {
                 progressDialog.dismiss();
-                Toast.makeText(MainActivity.this, response, Toast.LENGTH_SHORT).show();
+                showToast(response);
             }
         });
     }
@@ -193,32 +184,20 @@ public class MainActivity extends AppCompatActivity {
 
     private void authenticateUser() {
         progressDialog.show();
-        try {
-            API.getInstance(this).authenticateUser(new ResponseCallback() {
-                @Override
-                public void onSuccess(JSONObject response) {
-                    progressDialog.dismiss();
-                    try {
-                        token = response.getString("token");
-                        Stash.put(TOKEN, token);
-                        getDepartmentList();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
+        ServerConnector.getInstance().loginUser(new ResponseCallback() {
+            @Override
+            public void onSuccess(Object response) {
+                getDepartmentList();
+            }
 
-                @Override
-                public void onError(String response) {
-                    progressDialog.dismiss();
-                    binding.errorLayout.setVisibility(View.VISIBLE);
-                    binding.description.setText(response);
-                    Toast.makeText(MainActivity.this, response, Toast.LENGTH_SHORT).show();
-                }
-            });
-        } catch (Exception e) {
-            progressDialog.dismiss();
-            e.printStackTrace();
-        }
+            @Override
+            public void onError(String response) {
+                progressDialog.dismiss();
+                binding.errorLayout.setVisibility(View.VISIBLE);
+                binding.description.setText(response);
+                showToast(response);
+            }
+        });
     }
 
     private void restoreData() {
@@ -251,11 +230,26 @@ public class MainActivity extends AppCompatActivity {
     private void fetchData(String accountNumber, boolean check) {
         progressDialog.setMessage("Please Wait...");
         progressDialog.show();
-        API.getInstance(this).fetchData(accountNumber, new ResponseCallback() {
+        ServerConnector.getInstance().getDeviceRecord(accountNumber, new ResponseCallback() {
             @Override
-            public void onSuccess(JSONObject response) {
+            public void onSuccess(Object response) {
                 progressDialog.dismiss();
-                handleFetchData(response, check);
+                if (check) {
+                    if (response instanceof String s) {
+                        create_device();
+                    } else {
+                        if (response instanceof DeviceRecord record) {
+                            MainActivity.this.device = record.getId();
+                            updateInfo();
+                        }
+                    }
+                } else {
+                    if (response instanceof DeviceRecord record) {
+                        DeviceModel deviceModel = getDevice(record);
+                        MainActivity.this.device = record.getId();
+                        updateUI(deviceModel);
+                    }
+                }
             }
 
             @Override
@@ -263,49 +257,21 @@ public class MainActivity extends AppCompatActivity {
                 if (check) {
                     create_device();
                 } else {
-                    Toast.makeText(MainActivity.this, response, Toast.LENGTH_SHORT).show();
+                    showToast(response);
                 }
             }
         });
     }
 
-    private void handleFetchData(JSONObject response, boolean check) {
-        try {
-            String message = response.getString("message");
-            Log.d(TAG, "handleFetchData: " + message);
-            if (check) {
-                if (message.equals(getString(R.string.fail_message))) {
-                    create_device();
-                } else {
-                    JSONObject result = response.getJSONObject("result");
-                    MainActivity.this.device = result.getString("_id");
-                    updateInfo();
-                }
-            } else {
-                if (message.equals(getString(R.string.succes_message))) {
-                    JSONObject result = response.getJSONObject("result");
-                    DeviceModel deviceModel = getDevice(result);
-                    MainActivity.this.device = deviceModel.device_ID;
-                    updateUI(deviceModel);
-                } else {
-                    Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private DeviceModel getDevice(JSONObject result) throws Exception {
+    private DeviceModel getDevice(DeviceRecord record) {
         DeviceModel deviceModel = new DeviceModel();
-        deviceModel.device = result.getString("name");
-        deviceModel.bankName = result.getString("bank_name");
-        deviceModel.accountTitle = result.getString("account_title");
-        deviceModel.accountNumber = result.getString("account_number");
-        Log.d(TAG, "getDevice: " + deviceModel.accountNumber);
-        deviceModel.device_ID = result.getString("_id");
-        deviceModel.department = result.getJSONObject("department").getString("name");
-        deviceModel.department_ID = result.getJSONObject("department").getString("_id");
+        deviceModel.device = record.getName();
+        deviceModel.bankName = record.getBankName();
+        deviceModel.accountTitle = record.getAccountTitle();
+        deviceModel.accountNumber = record.getAccountNumber();
+        deviceModel.device_ID = record.getId();
+        deviceModel.department = record.getDepartment().getName();
+        deviceModel.department_ID = record.getDepartment().getId();
         return deviceModel;
     }
 
@@ -338,105 +304,96 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateInfo() {
+        CreateDeviceRequest request;
         try {
-            JSONObject json = getUpdateInfo();
-            API.getInstance(this).updateDevice(json, new ResponseCallback() {
-                @Override
-                public void onSuccess(JSONObject response) {
-                    progressDialog.dismiss();
-                    try {
-                        JSONObject result = response.getJSONObject("result");
-                        device = result.getString("_id");
-                        savedInfo();
-                    } catch (JSONException e) {
-                        runOnUiThread(() -> {
-                            Toast.makeText(MainActivity.this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-                        });
-                        e.printStackTrace();
-                    }
-                }
-
-                @Override
-                public void onError(String response) {
-                    progressDialog.dismiss();
-                    Toast.makeText(MainActivity.this, response, Toast.LENGTH_SHORT).show();
-                }
-            });
+            request = getCreateDeviceData(device);
         } catch (Exception e) {
+            showToast(e.getMessage());
             progressDialog.dismiss();
             binding.department.getEditText().setText("");
-            Toast.makeText(this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-            e.printStackTrace();
+            return;
         }
-    }
 
-    private JSONObject getUpdateInfo() throws Exception {
-        JSONObject json = new JSONObject();
-        json.put("device_id", this.device);
-        json.put("device", binding.deviceName.getEditText().getText().toString().trim());
-        json.put("bank_name", binding.bankName.getEditText().getText().toString().trim());
-        json.put("account_title", binding.accountTitle.getEditText().getText().toString().trim());
-        json.put("account_number", binding.accountNumber.getEditText().getText().toString().trim());
-        String department_ID = getDepartmentID();
-        if (department_ID.isEmpty()) {
-            throw new Exception("Department is invalid");
-        }
-        json.put("department", department_ID);
-        return json;
+        ServerConnector.getInstance().updateDevice(
+                request,
+                new ResponseCallback() {
+                    @Override
+                    public void onSuccess(Object response) {
+                        progressDialog.dismiss();
+                        if (response instanceof NewDeviceRecord record) {
+                            device = record.getId();
+                            savedInfo();
+                        } else if (response instanceof String s) {
+                            showToast(s);
+                        }
+                    }
+
+                    @Override
+                    public void onError(String response) {
+                        progressDialog.dismiss();
+                        showToast(response);
+                    }
+                }
+        );
     }
 
     private void create_device() {
         progressDialog.setMessage("Creating New Device...");
         progressDialog.show();
-        try {
-            JSONObject json = getCreateDeviceData();
-            API.getInstance(this).createDevice(json, new ResponseCallback() {
-                @Override
-                public void onSuccess(JSONObject response) {
-                    progressDialog.dismiss();
-                    try {
-                        JSONObject result = response.getJSONObject("result");
-                        device = result.getString("_id");
-                        savedInfo();
-                    } catch (Exception e) {
-                        Toast.makeText(MainActivity.this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-                        e.printStackTrace();
-                    }
-                }
+        CreateDeviceRequest request;
 
-                @Override
-                public void onError(String response) {
-                    progressDialog.dismiss();
-                    Toast.makeText(MainActivity.this, response, Toast.LENGTH_SHORT).show();
-                }
-            });
+        try {
+            request = getCreateDeviceData("");
         } catch (Exception e) {
+            showToast(e.getMessage());
             progressDialog.dismiss();
             binding.department.getEditText().setText("");
-            Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
-            e.printStackTrace();
+            return;
         }
+
+        ServerConnector.getInstance().createDevice(
+                request,
+                new ResponseCallback() {
+                    @Override
+                    public void onSuccess(Object response) {
+                        progressDialog.dismiss();
+                        if (response instanceof NewDeviceRecord record) {
+                            device = record.getId();
+                            savedInfo();
+                        } else if (response instanceof String s) {
+                            showToast(s);
+                        }
+                    }
+
+                    @Override
+                    public void onError(String response) {
+                        progressDialog.dismiss();
+                        showToast(response);
+                    }
+                }
+        );
     }
 
-    private JSONObject getCreateDeviceData() throws Exception {
-        JSONObject json = new JSONObject();
-        json.put("device", binding.deviceName.getEditText().getText().toString().trim());
-        json.put("bank_name", binding.bankName.getEditText().getText().toString().trim());
-        json.put("account_title", binding.accountTitle.getEditText().getText().toString().trim());
-        json.put("account_number", binding.accountNumber.getEditText().getText().toString().trim());
+    private CreateDeviceRequest getCreateDeviceData(String deviceID) throws Exception {
         String department_ID = getDepartmentID();
         if (department_ID.isEmpty()) {
             throw new Exception("Department is invalid");
         }
-        json.put("department", department_ID);
-        return json;
+        return new CreateDeviceRequest(
+                deviceID,
+                binding.deviceName.getEditText().getText().toString().trim(),
+                binding.bankName.getEditText().getText().toString().trim(),
+                binding.accountTitle.getEditText().getText().toString().trim(),
+                binding.accountNumber.getEditText().getText().toString().trim(),
+                department_ID
+        );
     }
 
     private String getDepartmentID() {
         String department_ID = "";
         for (Department department : departmentsID) {
-            if (department.name.equals(binding.department.getEditText().getText().toString().trim())) {
-                department_ID = department.id;
+            if (department.getName().equals(binding.department.getEditText().getText().toString().trim())) {
+                department_ID = department.getId();
                 break;
             }
         }
@@ -466,37 +423,38 @@ public class MainActivity extends AppCompatActivity {
         binding.save.setText("Edit");
     }
 
+    private void showToast(String response) {
+        Toast.makeText(MainActivity.this, response, Toast.LENGTH_LONG).show();
+    }
+
     private void getDepartmentList() {
         progressDialog.setMessage("Getting Department List");
         progressDialog.show();
-        API.getInstance(this).getDepartmentList(new ResponseCallback() {
+        ServerConnector.getInstance().getDepartments(new ResponseCallback() {
             @Override
-            public void onSuccess(JSONObject response) {
+            public void onSuccess(Object response) {
                 progressDialog.dismiss();
-                try {
-                    JSONArray result = response.getJSONArray("result");
-                    setDepartmentAdapter(result);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    Toast.makeText(MainActivity.this, "Failed to fetch department list", Toast.LENGTH_SHORT).show();
+                if (response instanceof List) {
+                    List<Department> departments = (List<Department>) response;
+                    setDepartmentAdapter(departments);
                 }
             }
 
             @Override
             public void onError(String response) {
                 progressDialog.dismiss();
-                Toast.makeText(MainActivity.this, response, Toast.LENGTH_LONG).show();
+                showToast(response);
             }
         });
     }
 
-    private void setDepartmentAdapter(JSONArray result) throws Exception {
+    private void setDepartmentAdapter(List<Department> departmentList) {
         departmentsID.clear();
         departments.clear();
-        for (int i = 0; i < result.length(); i++) {
-            JSONObject object = result.getJSONObject(i);
-            departmentsID.add(new Department(object.getString("_id"), object.getString("name")));
-            departments.add(object.getString("name"));
+        departmentsID.addAll(departmentList);
+
+        for (Department department : departmentList) {
+            departments.add(department.getName());
         }
         ArrayAdapter<String> adapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_dropdown_item_1line, departments);
         binding.departmentList.setAdapter(adapter);

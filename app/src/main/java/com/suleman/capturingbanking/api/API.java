@@ -62,7 +62,7 @@ public class API {
         json.put("email", Production_Email);
         json.put("password", Production_Password);
         JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, getLink("signinApp"), json,
-                responseCallback::onSuccess,
+                response -> responseCallback.onSuccess(response),
                 error -> responseCallback.onError(parseError(error, "Failed to authenticate")));
         requestQueue.add(stringRequest);
     }
