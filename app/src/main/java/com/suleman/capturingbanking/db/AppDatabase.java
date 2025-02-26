@@ -11,8 +11,10 @@ import com.suleman.capturingbanking.model.MessageModel;
 @Database(entities = {MessageModel.class}, version = 1, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     private static AppDatabase instance;
-    private static final String CHANNEL_DATABASE = "CHANNEL_DATABASE";
-    public abstract MessageDAO userDao();
+    private static final String CHANNEL_DATABASE = "SECURE_SMS_DB";
+
+    public abstract MessageDAO messageDAO();
+
     public static synchronized AppDatabase getInstance(Context context) {
         if (instance == null) {
             instance = Room.databaseBuilder(context.getApplicationContext(),

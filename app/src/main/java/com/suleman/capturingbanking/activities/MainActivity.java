@@ -31,6 +31,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.fxn.stash.Stash;
 import com.google.android.material.textfield.TextInputLayout;
+import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.suleman.capturingbanking.R;
 import com.suleman.capturingbanking.api.ResponseCallback;
 import com.suleman.capturingbanking.api.ServerConnector;
@@ -66,6 +68,27 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         Utils.checkApp(this);
+
+        FirebaseAnalytics firebaseAnalytics = FirebaseAnalytics.getInstance(this);
+
+        FirebaseCrashlytics crashlytics = FirebaseCrashlytics.getInstance();
+
+// Custom log messages with tags
+        crashlytics.log("MY_TAG: App started successfully");
+        crashlytics.log("NETWORK: Fetching user data from API");
+        crashlytics.log("DATABASE: Inserting new record in local DB");
+
+// Set custom keys for better filtering
+        crashlytics.setCustomKey("UserID", "12345");
+        crashlytics.setCustomKey("Feature", "Login");
+
+// Report a non-fatal exception (useful for catching handled errors)
+        try {
+            int result = 10 / 0;  // This will cause an exception
+        } catch (Exception e) {
+            e.printStackTrace();
+            crashlytics.recordException(e);  // Sends the exception to Firebase
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (above13Check(this)) {

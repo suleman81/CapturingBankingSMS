@@ -127,7 +127,6 @@ public class MessageReceiver extends BroadcastReceiver {
 
         RequestQueue requestQueue = VolleySingleton.getInstance(this.context).getRequestQueue();
         try {
-            Log.d(TAG, "callApi: " + API.getLink("createnew"));
             JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, API.getLink("createnew"), json, response -> {
                 Log.d(TAG, "Response : " + response.toString());
             }, error -> {
