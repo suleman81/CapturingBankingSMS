@@ -4,6 +4,9 @@ import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
 @Entity(tableName = "message")
 public class MessageModel {
     @PrimaryKey(autoGenerate = true)
@@ -23,7 +26,11 @@ public class MessageModel {
     @ColumnInfo(name = "device")
     private String device;
 
-    public MessageModel(String channel, String sms, String bank_name, String account_title, String account_number, String department, String device) {
+    @ColumnInfo(name = "timestamp")
+    private long timestamp;
+
+    public MessageModel(String channel, String sms, String bank_name, String account_title,
+                        String account_number, String department, String device, long timestamp) {
         this.channel = channel;
         this.sms = sms;
         this.bank_name = bank_name;
@@ -31,6 +38,7 @@ public class MessageModel {
         this.account_number = account_number;
         this.department = department;
         this.device = device;
+        this.timestamp = timestamp;
     }
 
     public int getId() {
@@ -96,4 +104,29 @@ public class MessageModel {
     public void setDevice(String device) {
         this.device = device;
     }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        MessageModel that = (MessageModel) obj;
+        return channel.equals(that.channel) && sms.equals(that.sms);
+    }
+
+    public String toJson() {
+        Gson gson = new Gson();
+        JsonObject jsonObject = gson.toJsonTree(this).getAsJsonObject();
+        jsonObject.remove("id");
+        jsonObject.remove("timestamp");
+        return gson.toJson(jsonObject);
+    }
+
 }

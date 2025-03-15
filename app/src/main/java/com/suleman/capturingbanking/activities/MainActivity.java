@@ -31,8 +31,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.fxn.stash.Stash;
 import com.google.android.material.textfield.TextInputLayout;
-import com.google.firebase.analytics.FirebaseAnalytics;
-import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.suleman.capturingbanking.R;
 import com.suleman.capturingbanking.api.ResponseCallback;
 import com.suleman.capturingbanking.api.ServerConnector;
@@ -44,7 +42,7 @@ import com.suleman.capturingbanking.model.DeviceRecord;
 import com.suleman.capturingbanking.model.NewDeviceRecord;
 import com.suleman.capturingbanking.services.MessageReceiver;
 import com.suleman.capturingbanking.utilies.InAppUpdateHelper;
-import com.suleman.capturingbanking.utilies.NetworkUtils;
+import com.suleman.capturingbanking.utilies.NetworkUtil;
 import com.suleman.capturingbanking.utilies.Utils;
 
 import java.util.ArrayList;
@@ -68,27 +66,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         Utils.checkApp(this);
-
-        FirebaseAnalytics firebaseAnalytics = FirebaseAnalytics.getInstance(this);
-
-        FirebaseCrashlytics crashlytics = FirebaseCrashlytics.getInstance();
-
-// Custom log messages with tags
-        crashlytics.log("MY_TAG: App started successfully");
-        crashlytics.log("NETWORK: Fetching user data from API");
-        crashlytics.log("DATABASE: Inserting new record in local DB");
-
-// Set custom keys for better filtering
-        crashlytics.setCustomKey("UserID", "12345");
-        crashlytics.setCustomKey("Feature", "Login");
-
-// Report a non-fatal exception (useful for catching handled errors)
-        try {
-            int result = 10 / 0;  // This will cause an exception
-        } catch (Exception e) {
-            e.printStackTrace();
-            crashlytics.recordException(e);  // Sends the exception to Firebase
-        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (above13Check(this)) {
@@ -115,11 +92,15 @@ public class MainActivity extends AppCompatActivity {
         inAppUpdateHelper.checkForUpdate();
 
         init();
-        if (NetworkUtils.isInternetAvailable(this)) authenticateUser();
+        if (NetworkUtil.isNetworkAvailable(this)) authenticateUser();
         else {
             binding.errorLayout.setVisibility(View.VISIBLE);
         }
 
+        setupClickListeners();
+    }
+
+    private void setupClickListeners() {
         binding.save.setOnClickListener(v -> {
             if (!binding.save.getText().toString().equals("Edit")) {
                 if (valid()) {
@@ -131,7 +112,9 @@ public class MainActivity extends AppCompatActivity {
                 binding.accountNumber.setEnabled(false);
             }
         });
-
+        binding.failed.setOnClickListener(v -> {
+            startActivity(new Intent(this, FailedMessagesActivity.class));
+        });
         binding.restore.setOnClickListener(v -> {
             restoreData();
         });
@@ -156,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
     private void refreshData() {
         progressDialog.setMessage("Please Wait...");
         progressDialog.show();
-        ServerConnector.getInstance().getDeviceRecordById(device, new ResponseCallback() {
+        ServerConnector.getInstance(false).getDeviceRecordById(device, new ResponseCallback() {
             @Override
             public void onSuccess(Object response) {
                 progressDialog.dismiss();
@@ -187,7 +170,7 @@ public class MainActivity extends AppCompatActivity {
         progressDialog.setMessage("Authenticating Please wait...");
         progressDialog.setCancelable(false);
 
-        binding.accountNumber.getEditText().setFilters(new InputFilter[]{alphanumericFilter});
+      //  binding.accountNumber.getEditText().setFilters(new InputFilter[]{alphanumericFilter});
         DeviceModel deviceModel = (DeviceModel) Stash.getObject(MessageReceiver.INFO, DeviceModel.class);
         if (deviceModel != null && !deviceModel.isAllEmpty()) {
             setText(deviceModel);
@@ -207,7 +190,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void authenticateUser() {
         progressDialog.show();
-        ServerConnector.getInstance().loginUser(new ResponseCallback() {
+        ServerConnector.getInstance(false).loginUser(new ResponseCallback() {
             @Override
             public void onSuccess(Object response) {
                 getDepartmentList();
@@ -236,7 +219,7 @@ public class MainActivity extends AppCompatActivity {
         Button close = dialog.findViewById(R.id.close);
         TextInputLayout account = dialog.findViewById(R.id.account);
 
-        account.getEditText().setFilters(new InputFilter[]{alphanumericFilter});
+        //account.getEditText().setFilters(new InputFilter[]{alphanumericFilter});
 
         close.setOnClickListener(v -> dialog.dismiss());
 
@@ -253,7 +236,7 @@ public class MainActivity extends AppCompatActivity {
     private void fetchData(String accountNumber, boolean check) {
         progressDialog.setMessage("Please Wait...");
         progressDialog.show();
-        ServerConnector.getInstance().getDeviceRecord(accountNumber, new ResponseCallback() {
+        ServerConnector.getInstance(false).getDeviceRecord(accountNumber, new ResponseCallback() {
             @Override
             public void onSuccess(Object response) {
                 progressDialog.dismiss();
@@ -277,6 +260,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onError(String response) {
+                progressDialog.dismiss();
                 if (check) {
                     create_device();
                 } else {
@@ -337,7 +321,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        ServerConnector.getInstance().updateDevice(
+        ServerConnector.getInstance(false).updateDevice(
                 request,
                 new ResponseCallback() {
                     @Override
@@ -374,7 +358,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        ServerConnector.getInstance().createDevice(
+        ServerConnector.getInstance(false).createDevice(
                 request,
                 new ResponseCallback() {
                     @Override
@@ -453,7 +437,7 @@ public class MainActivity extends AppCompatActivity {
     private void getDepartmentList() {
         progressDialog.setMessage("Getting Department List");
         progressDialog.show();
-        ServerConnector.getInstance().getDepartments(new ResponseCallback() {
+        ServerConnector.getInstance(false).getDepartments(new ResponseCallback() {
             @Override
             public void onSuccess(Object response) {
                 progressDialog.dismiss();

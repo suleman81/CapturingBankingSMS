@@ -8,4 +8,5 @@
     <string name="privacy_policy"><u>Privacy Policy</u></string>
     <string name="succes_message">Record fetched successfully</string>
     <string name="fail_message">Record not found</string>
+    <string name="lorem">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Atque aut distinctio iure, neque quia vitae?</string>
 </resources>

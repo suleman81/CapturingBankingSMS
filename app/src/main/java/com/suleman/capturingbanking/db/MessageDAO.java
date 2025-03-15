@@ -2,6 +2,7 @@ package com.suleman.capturingbanking.db;
 
 import static androidx.room.OnConflictStrategy.REPLACE;
 
+import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
 import androidx.room.Delete;
 import androidx.room.Insert;
@@ -18,8 +19,11 @@ public interface  MessageDAO {
     void insert(MessageModel messageModel);
 
     @Query("SELECT * FROM message")
-    List<MessageModel> getAllUsers();
+    LiveData<List<MessageModel>> getAllMessages();
 
     @Query("DELETE FROM message")
     void deleteAll();
+
+    @Query("DELETE FROM message WHERE id = :messageId")
+    void deleteById(int messageId);
 }

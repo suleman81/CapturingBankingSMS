@@ -7,19 +7,47 @@ import com.suleman.capturingbanking.api.response_models.CreateDeviceRequest;
 import com.suleman.capturingbanking.api.response_models.DepartmentResponse;
 import com.suleman.capturingbanking.api.response_models.DeviceRecordResponse;
 import com.suleman.capturingbanking.api.response_models.LoginResponse;
+import com.suleman.capturingbanking.api.response_models.MessageResponse;
 import com.suleman.capturingbanking.api.response_models.NewDeviceResponse;
 import com.suleman.capturingbanking.model.LoginRequest;
 
+import java.io.IOException;
+
+import okhttp3.MediaType;
+import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
+
+/*
+*
+* {
+    "message": "Record fetched successfully",
+    "result": {
+        "_id": "67c157698d90995ad6d3b83b",
+        "name": "Testing-device",
+        "bank_name": "SBI",
+        "account_title": "Test Title",
+        "account_number": "xyz-12342",
+        "department": {
+            "_id": "6666c49859549d174f397b23",
+            "name": "B2C"
+        }
+    }
+}
+*
+* */
+
 public class ServerConnector {
     private static ServerConnector instance;
+    private static ServerConnector upiInstance;
     private static final String BASE_URL = "https://www.btocsms.com/api/";
     private static final String STAGE_URL = "https://stage.btocsms.com/api/";
+    public static final String UPI_SERVER = "https://upipayment.co/api/";
+    public static final String UPI_SERVER_STAGING = "https://stage.upipayment.co/api/";
     private static final String PRODUCTION_EMAIL = "bankingsms@blueirissoft.com";
     private static final String PRODUCTION_PASSWORD = "BankSMS76&60$$";
     private static final String STAGING_EMAIL = "stage@blueirissoft.com";
@@ -27,16 +55,25 @@ public class ServerConnector {
     private static final boolean IS_STAGING = true;
     private final ApiService apiService;
 
-    public static synchronized ServerConnector getInstance() {
+    public static synchronized ServerConnector getInstance(boolean isUpiServer) {
+        if (isUpiServer) {
+            if (upiInstance == null) {
+                upiInstance = new ServerConnector(true);
+            }
+            return upiInstance;
+        }
         if (instance == null) {
-            instance = new ServerConnector();
+            instance = new ServerConnector(false);
         }
         return instance;
     }
 
-    private ServerConnector() {
+    private ServerConnector(boolean isUpiServer) {
+        String base = isUpiServer ? (IS_STAGING ? UPI_SERVER_STAGING : UPI_SERVER) :
+                (IS_STAGING ? STAGE_URL : BASE_URL);
+
         Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(IS_STAGING ? STAGE_URL : BASE_URL)
+                .baseUrl(base)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
         apiService = retrofit.create(ApiService.class);
@@ -194,6 +231,59 @@ public class ServerConnector {
 
             @Override
             public void onFailure(Call<LoginResponse> call, Throwable t) {
+                callback.onError(t.getMessage());
+            }
+        });
+    }
+
+    public void sendMessageToUpiServer(String json, ResponseCallback callback) {
+        RequestBody requestBody = RequestBody.create(
+                MediaType.parse("application/json"), json
+        );
+        apiService.sendUpiMessage(requestBody).enqueue(new Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                if (response.isSuccessful()) {
+                    callback.onSuccess(response);
+                } else {
+                    try {
+                        callback.onError("Error Body: " + response.errorBody().string());
+                        callback.onError("Error Message: " + response.message());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+                callback.onError(t.getMessage());
+            }
+        });
+    }
+
+    public void sendMessage(String json, ResponseCallback callback) {
+        RequestBody requestBody = RequestBody.create(
+                MediaType.parse("application/json"), json
+        );
+        String token = getToken();
+        if (token.isEmpty()) {
+            callback.onError("Token not found. Please log in again.");
+            return;
+        }
+        String authHeader = "Bearer " + token;
+        apiService.sendMessage(requestBody, authHeader).enqueue(new Callback<MessageResponse>() {
+            @Override
+            public void onResponse(Call<MessageResponse> call, Response<MessageResponse> response) {
+                if (response.isSuccessful()) {
+                    callback.onSuccess("Message Send Successfully");
+                } else {
+                    callback.onError("Failed to send message");
+                }
+            }
+
+            @Override
+            public void onFailure(Call<MessageResponse> call, Throwable t) {
                 callback.onError(t.getMessage());
             }
         });

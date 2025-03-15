@@ -28,14 +28,30 @@
                 android:layout_height="match_parent"
                 android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/acme"
-                    android:padding="20dp"
-                    android:text="@string/app_name"
-                    android:textColor="@color/black"
-                    android:textSize="28sp" />
+                    android:gravity="center">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/acme"
+                        android:padding="20dp"
+                        android:text="@string/app_name"
+                        android:textColor="@color/black"
+                        android:textSize="28sp" />
+
+                    <Button
+                        android:id="@+id/failed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="10dp"
+                        android:backgroundTint="#ff0000"
+                        android:text="Failed Messages" />
+
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -113,8 +129,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="20dp"
-                    android:gravity="center"
                     android:layout_marginTop="5dp"
+                    android:gravity="center"
                     android:orientation="horizontal">
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -137,10 +153,10 @@
                         android:id="@+id/refresh"
                         android:layout_width="wrap_content"
                         android:layout_height="58dp"
-                        app:cardCornerRadius="8dp"
-                        app:cardBackgroundColor="@color/grey2"
                         android:layout_gravity="bottom"
                         android:layout_marginStart="10dp"
+                        app:cardBackgroundColor="@color/grey2"
+                        app:cardCornerRadius="8dp"
                         app:cardElevation="0dp"
                         app:strokeWidth="0dp">
 
@@ -231,10 +247,10 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:background="@color/black_trans"
-        android:gravity="center"
-        android:orientation="vertical"
         android:clickable="true"
         android:focusable="true"
+        android:gravity="center"
+        android:orientation="vertical"
         android:padding="16dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
