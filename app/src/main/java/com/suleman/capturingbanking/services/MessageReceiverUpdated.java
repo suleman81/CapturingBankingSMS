@@ -24,7 +24,8 @@ import com.suleman.capturingbanking.utilies.Utils;
 public class MessageReceiverUpdated extends BroadcastReceiver {
     public String TAG = "MessageReceiverUpdated";
     public static final String INFO = "INFO";
-    private static final int RETRY_DELAY_MS = 20_000;
+    public static final int RETRY_DELAY_MS = 10;
+    public static final String RETRY_DELAY = "RETRY_DELAY";
     private static final int MAX_RETRIES = 5;
     private static final int FRESH_MESSAGE_THRESHOLD_MS = 90_000;
     private Context context;
@@ -50,6 +51,9 @@ public class MessageReceiverUpdated extends BroadcastReceiver {
                         sender = smsMessage.getDisplayOriginatingAddress();
                         fullMessage.append(smsMessage.getMessageBody());
                     }
+
+                    Log.d(TAG, "onReceive: sender: " + sender);
+                    Log.d(TAG, "onReceive: Full Message: " + fullMessage);
 
                     if (Utils.isDuplicateMessage(context, fullMessage.toString(), sender)) {
                         Log.d(TAG, "Duplicate SMS received, ignoring...");
@@ -104,11 +108,12 @@ public class MessageReceiverUpdated extends BroadcastReceiver {
                 @Override
                 public void onSuccess(Object response) {
                     Log.d(TAG, "Message sent successfully");
+                    NotificationHelper.sendNotification(context, "Banking SMS", "Message sent successfully");
                 }
 
                 @Override
                 public void onError(String response) {
-                    Log.d(TAG, "Retrying... Attempt: " + (attempt + 1));
+                    NotificationHelper.sendNotification(context, "API Failed", "Retrying... Attempt: " + (attempt + 1));
                     retryApiCall(model, attempt + 1);
                 }
             });
@@ -118,16 +123,22 @@ public class MessageReceiverUpdated extends BroadcastReceiver {
                     @Override
                     public void onSuccess(Object response) {
                         Log.d(TAG, "UPI Message sent successfully");
+                        NotificationHelper.sendNotification(context, "Upi Server", "UPI Message sent successfully");
                     }
 
                     @Override
                     public void onError(String response) {
                         Log.d(TAG, "UpiServer Error : " + response);
                         Log.d(TAG, "UPI Message failed, but won't retry if stale");
+
+                        NotificationHelper.sendNotification(context, "UpiServer Error", response+"");
+
                     }
                 });
+            } else {
+                NotificationHelper.sendNotification(context, "Old Message", "Message is 90 Sec old for UPI API");
             }
-        }, RETRY_DELAY_MS);
+        }, (Stash.getInt(RETRY_DELAY, RETRY_DELAY_MS) * 1000L));
     }
 
 }

@@ -3,6 +3,7 @@ package com.suleman.capturingbanking.utilies;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -27,6 +28,7 @@ import retrofit2.Call;
 import retrofit2.Response;
 
 public class InternetCheckWorker extends Worker {
+    private static final String TAG = "InternetCheckWorker";
     private MessageDAO messageDAO;
     private static final long MESSAGE_EXPIRY_TIME = 90 * 1000; // 90 seconds
 
@@ -39,12 +41,16 @@ public class InternetCheckWorker extends Worker {
     @NonNull
     @Override
     public Result doWork() {
+        Log.d(TAG, "doWork");
 
         int retryCount = getInputData().getInt("RETRY_COUNT", 0);
 
         if (!isInternetAvailable()) {
             return Result.retry();
         }
+
+
+        Log.d(TAG, "retryCount: " + retryCount);
 
         if (retryCount < 4) {
             retryCount++; // Increment retry count
@@ -68,7 +74,6 @@ public class InternetCheckWorker extends Worker {
     private void scheduleNextCheck(Context context, int retryCount) {
         Utils.scheduleWorkManager(context, retryCount);
     }
-
 
     private boolean processMessage(MessageModel message, long currentTime) {
         CountDownLatch latch = new CountDownLatch(1);
@@ -97,6 +102,7 @@ public class InternetCheckWorker extends Worker {
     }
 
     private void sendMessageApi(MessageModel message, ApiCallback callback) {
+        Log.d(TAG, "sendMessageApi");
         ServerConnector.getInstance(false).sendMessage(
                 message.toJson(), new ResponseCallback() {
                     @Override

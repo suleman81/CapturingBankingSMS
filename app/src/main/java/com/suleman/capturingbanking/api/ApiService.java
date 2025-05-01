@@ -46,6 +46,9 @@ public interface ApiService {
     @POST("createnew")
     Call<MessageResponse> sendMessage(@Body RequestBody request, @Header("Authorization") String authToken);
 
+//    @POST("this_does_not_exist")
+//    Call<MessageResponse> sendMessage(@Body RequestBody request, @Header("Authorization") String authToken);
+
     @Headers("Content-Type: application/json")
     @POST("message-request")
     Call<String> sendUpiMessage(@Body RequestBody body);

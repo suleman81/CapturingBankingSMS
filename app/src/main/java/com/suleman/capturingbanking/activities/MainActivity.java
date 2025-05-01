@@ -41,6 +41,7 @@ import com.suleman.capturingbanking.model.DeviceModel;
 import com.suleman.capturingbanking.model.DeviceRecord;
 import com.suleman.capturingbanking.model.NewDeviceRecord;
 import com.suleman.capturingbanking.services.MessageReceiver;
+import com.suleman.capturingbanking.services.MessageReceiverUpdated;
 import com.suleman.capturingbanking.utilies.InAppUpdateHelper;
 import com.suleman.capturingbanking.utilies.NetworkUtil;
 import com.suleman.capturingbanking.utilies.Utils;
@@ -118,6 +119,9 @@ public class MainActivity extends AppCompatActivity {
         binding.restore.setOnClickListener(v -> {
             restoreData();
         });
+        binding.retrySeconds.setOnClickListener(v -> {
+            retry();
+        });
         binding.retry.setOnClickListener(v -> {
             recreate();
         });
@@ -133,6 +137,33 @@ public class MainActivity extends AppCompatActivity {
         });
         binding.policy.setOnClickListener(v -> {
             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.blueirissoft.com/privacy-policy")));
+        });
+    }
+
+    private void retry() {
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.retry_threshold);
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+        dialog.setCancelable(false);
+        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        dialog.show();
+
+        Button restore = dialog.findViewById(R.id.restore);
+        Button close = dialog.findViewById(R.id.close);
+        TextInputLayout account = dialog.findViewById(R.id.account);
+
+        account.getEditText().setText(String.valueOf(Stash.getInt(MessageReceiverUpdated.RETRY_DELAY, MessageReceiverUpdated.RETRY_DELAY_MS)));
+
+        close.setOnClickListener(v -> dialog.dismiss());
+
+        restore.setOnClickListener(v -> {
+            if (account.getEditText().getText().toString().isEmpty()) {
+                Toast.makeText(this, "Please enter valid number", Toast.LENGTH_SHORT).show();
+            } else {
+                dialog.dismiss();
+                Stash.put(MessageReceiverUpdated.RETRY_DELAY, Integer.parseInt(account.getEditText().getText().toString()));
+            }
         });
     }
 
@@ -170,7 +201,7 @@ public class MainActivity extends AppCompatActivity {
         progressDialog.setMessage("Authenticating Please wait...");
         progressDialog.setCancelable(false);
 
-      //  binding.accountNumber.getEditText().setFilters(new InputFilter[]{alphanumericFilter});
+        //  binding.accountNumber.getEditText().setFilters(new InputFilter[]{alphanumericFilter});
         DeviceModel deviceModel = (DeviceModel) Stash.getObject(MessageReceiver.INFO, DeviceModel.class);
         if (deviceModel != null && !deviceModel.isAllEmpty()) {
             setText(deviceModel);
