@@ -17,4 +17,12 @@ public class MessageResponse {
     public TransactionResult getResult() {
         return result;
     }
+
+    @Override
+    public String toString() {
+        return "MessageResponse{" +
+                "message='" + message + '\'' +
+                ", result=" + result +
+                '}';
+    }
 }

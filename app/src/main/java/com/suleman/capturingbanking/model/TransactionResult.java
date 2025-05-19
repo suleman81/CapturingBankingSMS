@@ -178,5 +178,27 @@ public class TransactionResult {
     public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
     }
+
+    @Override
+    public String toString() {
+        return "TransactionResult{" +
+                "description='" + description + '\'' +
+                ", channel='" + channel + '\'' +
+                ", device='" + device + '\'' +
+                ", bankName='" + bankName + '\'' +
+                ", accountTitle='" + accountTitle + '\'' +
+                ", accountNumber='" + accountNumber + '\'' +
+                ", department='" + department + '\'' +
+                ", account='" + account + '\'' +
+                ", availableBalance='" + availableBalance + '\'' +
+                ", txnType='" + txnType + '\'' +
+                ", type='" + type + '\'' +
+                ", amount='" + amount + '\'' +
+                ", refNo='" + refNo + '\'' +
+                ", transactionType='" + transactionType + '\'' +
+                ", transactionCreatedDate='" + transactionCreatedDate + '\'' +
+                ", createdAt='" + createdAt + '\'' +
+                '}';
+    }
 }
 

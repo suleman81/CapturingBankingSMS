@@ -118,6 +118,8 @@ public class MessageReceiverUpdated extends BroadcastReceiver {
                 }
             });
 
+            Log.d(TAG, "Server Request: " + model.toJson());
+
             if (System.currentTimeMillis() - model.getTimestamp() < FRESH_MESSAGE_THRESHOLD_MS) {
                 ServerConnector.getInstance(true).sendMessageToUpiServer(model.toJson(), new ResponseCallback() {
                     @Override

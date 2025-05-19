@@ -31,6 +31,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.fxn.stash.Stash;
 import com.google.android.material.textfield.TextInputLayout;
+import com.suleman.capturingbanking.BuildConfig;
 import com.suleman.capturingbanking.R;
 import com.suleman.capturingbanking.api.ResponseCallback;
 import com.suleman.capturingbanking.api.ServerConnector;
@@ -55,7 +56,6 @@ public class MainActivity extends AppCompatActivity {
     String device;
     ArrayList<String> departments = new ArrayList<>();
     ArrayList<Department> departmentsID = new ArrayList<>();
-    public String token = "";
     private InAppUpdateHelper inAppUpdateHelper;
     ActivityResultLauncher activityResultLauncher;
 
@@ -67,6 +67,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         Utils.checkApp(this);
+
+        binding.version.setText(BuildConfig.VERSION_NAME);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (above13Check(this)) {

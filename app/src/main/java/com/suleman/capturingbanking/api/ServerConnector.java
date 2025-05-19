@@ -2,6 +2,8 @@ package com.suleman.capturingbanking.api;
 
 import static com.suleman.capturingbanking.utilies.Utils.TOKEN;
 
+import android.util.Log;
+
 import com.fxn.stash.Stash;
 import com.suleman.capturingbanking.api.response_models.CreateDeviceRequest;
 import com.suleman.capturingbanking.api.response_models.DepartmentResponse;
@@ -243,6 +245,7 @@ public class ServerConnector {
         apiService.sendUpiMessage(requestBody).enqueue(new Callback<String>() {
             @Override
             public void onResponse(Call<String> call, Response<String> response) {
+                Log.d("MessageReceiverUpdated", "UPI Response: " + response.body().toString());
                 if (response.isSuccessful()) {
                     callback.onSuccess(response);
                 } else {
@@ -272,9 +275,10 @@ public class ServerConnector {
             return;
         }
         String authHeader = "Bearer " + token;
-        apiService.sendMessage(requestBody, authHeader).enqueue(new Callback<MessageResponse>() {
+        apiService.sendMessage(requestBody, authHeader).enqueue(new Callback<>() {
             @Override
             public void onResponse(Call<MessageResponse> call, Response<MessageResponse> response) {
+                Log.d("MessageReceiverUpdated", "Response: " + response.body().toString());
                 if (response.isSuccessful()) {
                     callback.onSuccess("Message Send Successfully");
                 } else {
