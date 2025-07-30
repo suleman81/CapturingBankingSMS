@@ -4,5 +4,9 @@
     <string name="greeting_home">Thank you for using our app! We wanted to let you know that Please fill the form below for better app experience</string>
     <string name="message">This permission is used to detect any messages originating from your bank, allowing seamless integration with banking services.</string>
     <string name="internet">We utilize this permission to securely transmit these messages to our server for processing and analysis.</string>
+    <string name="notification">This permission is used to detect any incoming messages.</string>
     <string name="privacy_policy"><u>Privacy Policy</u></string>
+    <string name="succes_message">Record fetched successfully</string>
+    <string name="fail_message">Record not found</string>
+    <string name="lorem">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Atque aut distinctio iure, neque quia vitae?</string>
 </resources>

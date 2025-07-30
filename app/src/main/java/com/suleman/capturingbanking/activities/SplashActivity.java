@@ -1,8 +1,8 @@
 package com.suleman.capturingbanking.activities;
 
-import static com.suleman.capturingbanking.Utlis.TOKEN;
-import static com.suleman.capturingbanking.Utlis.above13Check;
-import static com.suleman.capturingbanking.Utlis.below13Check;
+import static com.suleman.capturingbanking.utilies.Utils.TOKEN;
+import static com.suleman.capturingbanking.utilies.Utils.above13Check;
+import static com.suleman.capturingbanking.utilies.Utils.below13Check;
 
 import android.content.Intent;
 import android.os.Build;
