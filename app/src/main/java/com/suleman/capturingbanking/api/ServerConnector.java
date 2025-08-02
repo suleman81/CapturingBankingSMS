@@ -13,8 +13,6 @@ import com.suleman.capturingbanking.api.response_models.MessageResponse;
 import com.suleman.capturingbanking.api.response_models.NewDeviceResponse;
 import com.suleman.capturingbanking.model.LoginRequest;
 
-import java.io.IOException;
-
 import okhttp3.MediaType;
 import okhttp3.RequestBody;
 import retrofit2.Call;
@@ -54,7 +52,7 @@ public class ServerConnector {
     private static final String PRODUCTION_PASSWORD = "BankSMS76&60$$";
     private static final String STAGING_EMAIL = "stage@blueirissoft.com";
     private static final String STAGING_PASSWORD = "stage123";
-    private static final boolean IS_STAGING = true;
+    private static final boolean IS_STAGING = false;
     private final ApiService apiService;
 
     public static synchronized ServerConnector getInstance(boolean isUpiServer) {
@@ -249,18 +247,19 @@ public class ServerConnector {
                 if (response.isSuccessful()) {
                     callback.onSuccess(response);
                 } else {
-                    try {
-                        callback.onError("Error Body: " + response.errorBody().string());
-                        callback.onError("Error Message: " + response.message());
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    callback.onError("Failed to send message on UPI Server");
+//                    try {
+//                        callback.onError("Error Body: " + response.errorBody().string());
+//                        callback.onError("Error Message: " + response.message());
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
                 }
             }
 
             @Override
             public void onFailure(Call<String> call, Throwable t) {
-                callback.onError(t.getMessage());
+                callback.onError("Failed to send message on UPI Server");
             }
         });
     }
@@ -278,7 +277,9 @@ public class ServerConnector {
         apiService.sendMessage(requestBody, authHeader).enqueue(new Callback<>() {
             @Override
             public void onResponse(Call<MessageResponse> call, Response<MessageResponse> response) {
-                Log.d("MessageReceiverUpdated", "Response: " + response.body().toString());
+                if (response.body() != null) {
+                    Log.d("MessageReceiverUpdated", "Response: " + response.body());
+                }
                 if (response.isSuccessful()) {
                     callback.onSuccess("Message Send Successfully");
                 } else {
@@ -288,7 +289,7 @@ public class ServerConnector {
 
             @Override
             public void onFailure(Call<MessageResponse> call, Throwable t) {
-                callback.onError(t.getMessage());
+                callback.onError("Failed to send message");
             }
         });
     }

@@ -113,7 +113,7 @@ public class MessageReceiverUpdated extends BroadcastReceiver {
 
                 @Override
                 public void onError(String response) {
-                    NotificationHelper.sendNotification(context, "API Failed", "Retrying... Attempt: " + (attempt + 1));
+                    NotificationHelper.sendNotification(context, "API Failed", "Retrying");
                     retryApiCall(model, attempt + 1);
                 }
             });
@@ -125,7 +125,7 @@ public class MessageReceiverUpdated extends BroadcastReceiver {
                     @Override
                     public void onSuccess(Object response) {
                         Log.d(TAG, "UPI Message sent successfully");
-                        NotificationHelper.sendNotification(context, "Upi Server", "UPI Message sent successfully");
+                        NotificationHelper.sendNotification(context, "Upi Server", "Message Successfully Sent");
                     }
 
                     @Override
@@ -133,7 +133,7 @@ public class MessageReceiverUpdated extends BroadcastReceiver {
                         Log.d(TAG, "UpiServer Error : " + response);
                         Log.d(TAG, "UPI Message failed, but won't retry if stale");
 
-                        NotificationHelper.sendNotification(context, "UpiServer Error", response+"");
+                        NotificationHelper.sendNotification(context, "Upi Server", "Message Sending Failed");
 
                     }
                 });
